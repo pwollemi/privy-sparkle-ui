@@ -9,7 +9,6 @@ export const PrivyWrapper: React.FC<{ children: React.ReactNode }> = ({ children
         appearance: {
           theme: 'dark',
           accentColor: '#7c3aed',
-          logo: 'https://your-logo-url.com/logo.png',
         },
         embeddedWallets: {
           createOnLogin: 'users-without-wallets',
