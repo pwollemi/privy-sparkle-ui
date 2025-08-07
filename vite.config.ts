@@ -19,8 +19,18 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  define: {
+    global: 'globalThis',
+    'process.env': {},
+  },
+  optimizeDeps: {
+    include: ['buffer', 'process']
+  },
   build: {
     rollupOptions: {
+      define: {
+        global: 'globalThis',
+      },
       onwarn(warning, warn) {
         // Suppress specific warnings from @privy-io packages
         if (warning.code === 'INVALID_ANNOTATION' && warning.message.includes('@privy-io')) {
