@@ -21,7 +21,12 @@ export const useWalletBalance = (): WalletBalance => {
   });
 
   useEffect(() => {
-    if (!authenticated || !wallets.length || !wallets[0]?.address) {
+    console.log('Wallet debug:', { authenticated, wallets, firstWallet: wallets[0] });
+    
+    const wallet = wallets[0];
+    const address = wallet?.address;
+    
+    if (!authenticated || !wallets.length || !address) {
       setBalance({ sol: 0, isLoading: false, error: null });
       return;
     }
@@ -30,7 +35,7 @@ export const useWalletBalance = (): WalletBalance => {
       setBalance(prev => ({ ...prev, isLoading: true, error: null }));
       
       try {
-        const publicKey = new PublicKey(wallets[0].address);
+        const publicKey = new PublicKey(address);
         const solBalance = await connection.getBalance(publicKey);
         
         setBalance({

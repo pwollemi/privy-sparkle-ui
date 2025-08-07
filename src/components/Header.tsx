@@ -85,7 +85,14 @@ const Header = () => {
                   <div className="px-3 py-2 text-sm">
                     <div className="font-medium text-foreground">Wallet Address</div>
                     <div className="text-xs text-muted-foreground font-mono">
-                      {wallets[0]?.address?.slice(0, 8) + '...' + wallets[0]?.address?.slice(-8)}
+                      {(() => {
+                        // Get wallet address
+                        const wallet = wallets[0];
+                        const address = wallet?.address || 'No address';
+                        return address.length > 20 ? 
+                          (address.slice(0, 8) + '...' + address.slice(-8)) :
+                          address;
+                      })()}
                     </div>
                   </div>
                   
