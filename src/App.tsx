@@ -7,6 +7,7 @@ import { PrivyWrapper } from "@/lib/privy";
 import Header from "@/components/Header";
 import Home from "./pages/Home";
 import CreateToken from "./pages/CreateToken";
+import Portfolio from "./pages/Portfolio";
 import TokenDetail from "./pages/TokenDetail";
 import NotFound from "./pages/NotFound";
 
@@ -24,6 +25,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/create" element={<CreateToken />} />
+              <Route path="/portfolio" element={<Portfolio />} />
               <Route path="/token/:id" element={<TokenDetail />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

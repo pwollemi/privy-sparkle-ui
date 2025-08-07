@@ -37,7 +37,10 @@ const Header = () => {
             >
               Create Token
             </button>
-            <button className="text-foreground hover:text-primary transition-colors">
+            <button 
+              onClick={() => navigate('/portfolio')}
+              className="text-foreground hover:text-primary transition-colors"
+            >
               Portfolio
             </button>
           </nav>

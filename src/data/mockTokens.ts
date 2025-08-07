@@ -1,3 +1,5 @@
+import pepeMoonIcon from '@/assets/pepe-moon-icon.png';
+
 export interface Token {
   id: string;
   name: string;
@@ -23,7 +25,7 @@ export const mockTokens: Token[] = [
     name: "Pepe Moon",
     symbol: "PMOON",
     description: "The ultimate meme coin that's going to the moon! Join the Pepe revolution and ride the wave to financial freedom.",
-    image: "https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=100&h=100&fit=crop&crop=face",
+    image: pepeMoonIcon,
     price: 0.000234,
     change24h: 127.45,
     marketCap: 2340000,
