@@ -4,7 +4,7 @@ import React from 'react';
 export const PrivyWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <PrivyProvider
-      appId="cmcwv1wi201tnjm0mmexyzxyi"
+      appId="cme0slnak000dlc0bhsszodpt"
       config={{
         appearance: {
           theme: 'dark',
