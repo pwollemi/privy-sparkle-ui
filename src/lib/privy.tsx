@@ -4,7 +4,7 @@ import { PrivyProvider } from '@privy-io/react-auth';
 export const PrivyWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <PrivyProvider
-      appId="your-privy-app-id" // Replace with actual Privy app ID
+      appId="cmcwv1wi201tnjm0mmexyzxyi"
       config={{
         appearance: {
           theme: 'dark',
