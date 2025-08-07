@@ -64,11 +64,11 @@ const Header = () => {
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem disabled className="text-sm">
+                <DropdownMenuContent align="end" className="w-48 bg-popover border-border shadow-lg">
+                  <DropdownMenuItem disabled className="text-sm text-muted-foreground">
                     {user?.wallet?.address?.slice(0, 6) + '...' + user?.wallet?.address?.slice(-4)}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={logout} className="text-destructive">
+                  <DropdownMenuItem onClick={logout} className="text-destructive hover:bg-destructive/10">
                     <LogOut className="h-4 w-4 mr-2" />
                     Disconnect
                   </DropdownMenuItem>
