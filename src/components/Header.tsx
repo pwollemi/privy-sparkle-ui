@@ -1,13 +1,18 @@
 import React from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Wallet, TrendingUp, Plus, User, LogOut } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Wallet, TrendingUp, Plus, User, LogOut, Coins } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useWalletBalance } from '@/hooks/useWalletBalance';
+import { useSolanaWallets } from '@privy-io/react-auth/solana';
 
 const Header = () => {
   const { ready, authenticated, user, login, logout } = usePrivy();
+  const { wallets } = useSolanaWallets();
+  const { sol, isLoading } = useWalletBalance();
   const navigate = useNavigate();
 
   return (
@@ -46,6 +51,15 @@ const Header = () => {
           </nav>
 
           <div className="flex items-center gap-3">
+            {authenticated && wallets.length > 0 && (
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg">
+                <Coins className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">
+                  {isLoading ? '...' : `${sol.toFixed(4)} SOL`}
+                </span>
+              </div>
+            )}
+            
             <Button
               variant="neon-outline"
               size="sm"
@@ -67,10 +81,27 @@ const Header = () => {
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 bg-popover border-border shadow-lg">
-                  <DropdownMenuItem disabled className="text-sm text-muted-foreground">
-                    {user?.wallet?.address?.slice(0, 6) + '...' + user?.wallet?.address?.slice(-4)}
-                  </DropdownMenuItem>
+                <DropdownMenuContent align="end" className="w-56 bg-popover border-border shadow-lg">
+                  <div className="px-3 py-2 text-sm">
+                    <div className="font-medium text-foreground">Wallet Address</div>
+                    <div className="text-xs text-muted-foreground font-mono">
+                      {wallets[0]?.address?.slice(0, 8) + '...' + wallets[0]?.address?.slice(-8)}
+                    </div>
+                  </div>
+                  
+                  <DropdownMenuSeparator />
+                  
+                  <div className="px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">SOL Balance</span>
+                      <Badge variant="secondary" className="font-mono">
+                        {isLoading ? '...' : `${sol.toFixed(4)} SOL`}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <DropdownMenuSeparator />
+                  
                   <DropdownMenuItem onClick={logout} className="text-destructive hover:bg-destructive/10">
                     <LogOut className="h-4 w-4 mr-2" />
                     Disconnect
