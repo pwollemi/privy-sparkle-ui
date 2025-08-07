@@ -4,11 +4,15 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Upload, Rocket, AlertCircle } from 'lucide-react';
+import { Upload, Rocket, AlertCircle, Wallet } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useSolanaProgram } from '@/lib/solana-program';
+import { usePrivy } from '@privy-io/react-auth';
 
 const CreateToken = () => {
   const { toast } = useToast();
+  const { login, authenticated } = usePrivy();
+  const { createTokenPool, isConnected, walletAddress } = useSolanaProgram();
   const [isCreating, setIsCreating] = React.useState(false);
   const [formData, setFormData] = React.useState({
     name: '',
@@ -42,14 +46,32 @@ const CreateToken = () => {
       return;
     }
 
+    if (!isConnected) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your Solana wallet to create a token.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsCreating(true);
     
-    // Simulate token creation
-    setTimeout(() => {
-      setIsCreating(false);
+    try {
+      const result = await createTokenPool({
+        name: formData.name,
+        symbol: formData.symbol,
+        description: formData.description,
+        initialSupply: parseInt(formData.initialSupply) || 1000000000,
+        image: formData.image || undefined,
+        website: formData.website,
+        twitter: formData.twitter,
+        telegram: formData.telegram,
+      });
+
       toast({
         title: "Token Created Successfully! 🚀",
-        description: `${formData.symbol} has been launched to the moon!`,
+        description: `${formData.symbol} has been launched! Pool: ${result.poolAddress.slice(0, 8)}...`,
       });
       
       // Reset form
@@ -63,7 +85,16 @@ const CreateToken = () => {
         twitter: '',
         telegram: ''
       });
-    }, 3000);
+    } catch (error) {
+      console.error('Token creation error:', error);
+      toast({
+        title: "Token Creation Failed",
+        description: error instanceof Error ? error.message : "Failed to create token. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   return (
@@ -207,26 +238,58 @@ const CreateToken = () => {
               </CardContent>
             </Card>
 
-            <Card className="bg-card/50 border-orange-500/20">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-orange-500 mt-1" />
-                  <div className="text-sm">
-                    <p className="font-semibold text-orange-500 mb-1">Important Notice</p>
-                    <p className="text-muted-foreground">
-                      This is a demo interface. In a real implementation, token creation would 
-                      require smart contract deployment and transaction fees.
-                    </p>
+            {!authenticated ? (
+              <Card className="bg-card/50 border-primary/20">
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-3">
+                    <Wallet className="h-5 w-5 text-primary mt-1" />
+                    <div className="text-sm">
+                      <p className="font-semibold text-primary mb-1">Connect Wallet</p>
+                      <p className="text-muted-foreground mb-3">
+                        Connect your Solana wallet to create and deploy tokens on-chain.
+                      </p>
+                      <Button onClick={login} variant="outline" size="sm">
+                        Connect Wallet
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            ) : isConnected ? (
+              <Card className="bg-card/50 border-green-500/20">
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-3">
+                    <Wallet className="h-5 w-5 text-green-500 mt-1" />
+                    <div className="text-sm">
+                      <p className="font-semibold text-green-500 mb-1">Wallet Connected</p>
+                      <p className="text-muted-foreground">
+                        {walletAddress ? `${walletAddress.slice(0, 8)}...${walletAddress.slice(-8)}` : 'Connected'}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="bg-card/50 border-orange-500/20">
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-orange-500 mt-1" />
+                    <div className="text-sm">
+                      <p className="font-semibold text-orange-500 mb-1">No Solana Wallet</p>
+                      <p className="text-muted-foreground">
+                        Please connect a Solana wallet to create tokens on-chain.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <Button
               variant="hero"
               size="xl"
               onClick={handleCreate}
-              disabled={isCreating}
+              disabled={isCreating || !isConnected}
               className="w-full neon-glow"
             >
               {isCreating ? (
