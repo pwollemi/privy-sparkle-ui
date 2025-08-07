@@ -9,6 +9,9 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    headers: {
+      'Content-Security-Policy': "frame-ancestors 'self' https://lovable.dev https://*.lovableproject.com https://auth.privy.io https://*.privy.io",
+    },
   },
   plugins: [
     react(),
