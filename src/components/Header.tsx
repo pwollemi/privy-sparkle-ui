@@ -1,20 +1,14 @@
 import React from 'react';
-import { useWallet } from '@/lib/wallet';
+import { usePrivy } from '@privy-io/react-auth';
 import { Button } from '@/components/ui/button';
-import { Wallet, TrendingUp, Plus } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Wallet, TrendingUp, Plus, User, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Header = () => {
-  const { isConnected, address, connect, disconnect } = useWallet();
+  const { ready, authenticated, user, login, logout } = usePrivy();
   const navigate = useNavigate();
-
-  const handleConnect = () => {
-    if (!isConnected) {
-      connect();
-    } else {
-      disconnect();
-    }
-  };
 
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
@@ -59,17 +53,38 @@ const Header = () => {
               Create
             </Button>
             
-            <Button
-              variant={isConnected ? "ghost" : "neon"}
-              onClick={handleConnect}
-              className="min-w-[120px]"
-            >
-              <Wallet className="h-4 w-4" />
-              {isConnected 
-                ? address?.slice(0, 6) + '...' + address?.slice(-4)
-                : 'Connect'
-              }
-            </Button>
+            {authenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="h-10 w-10 rounded-full p-0">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        <User className="h-4 w-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem disabled className="text-sm">
+                    {user?.wallet?.address?.slice(0, 6) + '...' + user?.wallet?.address?.slice(-4)}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={logout} className="text-destructive">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Disconnect
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                variant="neon"
+                onClick={login}
+                disabled={!ready}
+                className="min-w-[120px]"
+              >
+                <Wallet className="h-4 w-4" />
+                Connect
+              </Button>
+            )}
           </div>
         </div>
       </div>
