@@ -19,4 +19,15 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Suppress specific warnings from @privy-io packages
+        if (warning.code === 'INVALID_ANNOTATION' && warning.message.includes('@privy-io')) {
+          return;
+        }
+        warn(warning);
+      }
+    }
+  }
 }));
