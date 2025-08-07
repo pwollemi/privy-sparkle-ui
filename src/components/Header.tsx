@@ -1,18 +1,18 @@
 import React from 'react';
-import { usePrivy } from '@privy-io/react-auth';
+import { useWallet } from '@/lib/wallet';
 import { Button } from '@/components/ui/button';
 import { Wallet, TrendingUp, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Header = () => {
-  const { ready, authenticated, user, login, logout } = usePrivy();
+  const { isConnected, address, connect, disconnect } = useWallet();
   const navigate = useNavigate();
 
   const handleConnect = () => {
-    if (!authenticated) {
-      login();
+    if (!isConnected) {
+      connect();
     } else {
-      logout();
+      disconnect();
     }
   };
 
@@ -60,14 +60,13 @@ const Header = () => {
             </Button>
             
             <Button
-              variant={authenticated ? "ghost" : "neon"}
+              variant={isConnected ? "ghost" : "neon"}
               onClick={handleConnect}
-              disabled={!ready}
               className="min-w-[120px]"
             >
               <Wallet className="h-4 w-4" />
-              {authenticated 
-                ? user?.wallet?.address?.slice(0, 6) + '...' + user?.wallet?.address?.slice(-4)
+              {isConnected 
+                ? address?.slice(0, 6) + '...' + address?.slice(-4)
                 : 'Connect'
               }
             </Button>
