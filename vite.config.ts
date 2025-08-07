@@ -26,6 +26,10 @@ export default defineConfig(({ mode }) => ({
         if (warning.code === 'INVALID_ANNOTATION' && warning.message.includes('@privy-io')) {
           return;
         }
+        // Suppress unresolved dependency warnings for react-is
+        if (warning.code === 'UNRESOLVED_IMPORT' && warning.message.includes('react-is')) {
+          return;
+        }
         warn(warning);
       }
     }
