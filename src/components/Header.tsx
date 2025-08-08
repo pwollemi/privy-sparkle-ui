@@ -136,7 +136,7 @@ const Header = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <WalletMultiButton className="shadcn-wallet-button min-w-[140px]" />
+              <WalletMultiButton className="min-w-[120px]" />
             )}
           </div>
         </div>
