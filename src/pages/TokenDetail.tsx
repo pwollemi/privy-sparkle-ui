@@ -68,6 +68,18 @@ const TokenDetail = () => {
     fetchVirtualPool();
   }, [dbToken?.pool_address]);
 
+  const tokenPriceSOL = React.useMemo(() => {
+    const sqrt = (virtualPool as any)?.sqrtPrice;
+    try {
+      if (!sqrt) return 0;
+      const n = Number(sqrt.toString?.() ?? sqrt);
+      if (!isFinite(n) || n <= 0) return 0;
+      return n / 2 ** 63;
+    } catch {
+      return 0;
+    }
+  }, [virtualPool]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -116,19 +128,6 @@ const TokenDetail = () => {
     token.poolAddress ? (token.activationPoint ? 'Active' : 'Pending Activation') : 'Not Created';
 
   const isPositive = token.change24h >= 0;
-
-  const tokenPriceSOL = React.useMemo(() => {
-    const sqrt = (virtualPool as any)?.sqrtPrice;
-    try {
-      if (!sqrt) return 0;
-      const n = Number(sqrt.toString?.() ?? sqrt);
-      if (!isFinite(n) || n <= 0) return 0;
-      // Per requested formula: price (SOL per token) = sqrtPrice / 2^63
-      return n / 2 ** 63;
-    } catch {
-      return 0;
-    }
-  }, [virtualPool]);
 
   const formatPrice = (price: number) => {
     if (price < 0.0001) return price.toExponential(2);
