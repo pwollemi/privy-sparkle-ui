@@ -11,8 +11,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
 const Header = () => {
-  const { ready, authenticated, user, login, logout } = usePrivy();
-  const { wallets } = useSolanaWallets();
+  const { connected, publicKey, disconnect } = useWallet();
   const { sol, isLoading } = useWalletBalance();
   const navigate = useNavigate();
 

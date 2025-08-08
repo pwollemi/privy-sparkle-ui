@@ -142,9 +142,7 @@ export const useSolanaProgram = () => {
   };
 
   const buyToken = async (poolAddress: string, solAmount: number): Promise<string> => {
-    const wallet = getWallet();
-    
-    if (!wallet.address) {
+    if (!publicKey) {
       throw new Error('Wallet not connected');
     }
 
@@ -154,9 +152,7 @@ export const useSolanaProgram = () => {
   };
 
   const sellToken = async (poolAddress: string, tokenAmount: number): Promise<string> => {
-    const wallet = getWallet();
-    
-    if (!wallet.address) {
+    if (!publicKey) {
       throw new Error('Wallet not connected');
     }
 
