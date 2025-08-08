@@ -30,7 +30,7 @@ const Home = () => {
           <div className="flex items-center justify-center gap-2 mb-6">
             <Sparkles className="h-8 w-8 text-primary animate-pulse" />
             <h1 className="text-5xl md:text-7xl font-bold gradient-text">
-              pump.fun
+              Coinporate
             </h1>
             <Zap className="h-8 w-8 text-secondary animate-bounce" />
           </div>

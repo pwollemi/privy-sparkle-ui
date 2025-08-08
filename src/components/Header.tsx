@@ -27,7 +27,7 @@ const Header = () => {
             <div className="bg-gradient-primary p-2 rounded-lg shadow-neon-primary group-hover:shadow-neon-accent transition-all duration-300">
               <TrendingUp className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-bold gradient-text">pump.fun</span>
+            <span className="text-2xl font-bold gradient-text">Coinporate</span>
           </div>
 
           <nav className="hidden md:flex items-center gap-6">

@@ -60,7 +60,7 @@ const Portfolio = () => {
       <div className="container mx-auto max-w-6xl">
         <div className="mb-8">
           <h1 className="text-4xl font-bold gradient-text mb-2">Portfolio</h1>
-          <p className="text-muted-foreground">Track your pump.fun token investments</p>
+          <p className="text-muted-foreground">Track your Coinporate token investments</p>
         </div>
 
         {/* Portfolio Overview */}
@@ -137,7 +137,7 @@ const Portfolio = () => {
               <div className="text-center py-12">
                 <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No holdings yet</h3>
-                <p className="text-muted-foreground mb-4">Start investing in pump.fun tokens to see your portfolio here.</p>
+                <p className="text-muted-foreground mb-4">Start investing in Coinporate tokens to see your portfolio here.</p>
                 <Button onClick={() => navigate('/')}>
                   Discover Tokens
                 </Button>
