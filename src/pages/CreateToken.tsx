@@ -298,7 +298,7 @@ const CreateToken = () => {
                       <p className="text-muted-foreground mb-3">
                         Connect your Solana wallet to create and deploy tokens on-chain.
                       </p>
-                      <WalletMultiButton />
+                      <WalletMultiButton className="shadcn-wallet-button w-full h-11" />
                     </div>
                   </div>
                 </CardContent>
