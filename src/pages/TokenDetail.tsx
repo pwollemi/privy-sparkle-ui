@@ -117,6 +117,19 @@ const TokenDetail = () => {
 
   const isPositive = token.change24h >= 0;
 
+  const tokenPriceSOL = React.useMemo(() => {
+    const sqrt = (virtualPool as any)?.sqrtPrice;
+    try {
+      if (!sqrt) return 0;
+      const n = Number(sqrt.toString?.() ?? sqrt);
+      if (!isFinite(n) || n <= 0) return 0;
+      // Per requested formula: price (SOL per token) = sqrtPrice / 2^63
+      return n / 2 ** 63;
+    } catch {
+      return 0;
+    }
+  }, [virtualPool]);
+
   const formatPrice = (price: number) => {
     if (price < 0.0001) return price.toExponential(2);
     return price.toFixed(6);
@@ -219,8 +232,10 @@ const copyAddress = () => {
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
                   <div className="text-center p-3 bg-card/50 rounded-lg">
-                    <div className="text-2xl font-bold text-foreground">${formatPrice(token.price)}</div>
-                    <div className="text-xs text-muted-foreground">Price</div>
+                    <div className="text-2xl font-bold text-foreground">
+                      {tokenPriceSOL ? tokenPriceSOL.toPrecision(5) : '-'} SOL
+                    </div>
+                    <div className="text-xs text-muted-foreground">Price (SOL)</div>
                   </div>
                   <div className="text-center p-3 bg-card/50 rounded-lg">
                     <div className={`text-2xl font-bold flex items-center justify-center gap-1 ${
@@ -356,7 +371,7 @@ const copyAddress = () => {
                       />
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      ≈ {buyAmount && token.price > 0 ? (parseFloat(buyAmount) / token.price).toFixed(0) : '0'} {token.symbol}
+                      ≈ {buyAmount && tokenPriceSOL > 0 ? (parseFloat(buyAmount) / tokenPriceSOL).toFixed(0) : '0'} {token.symbol}
                     </div>
                     <Button 
                       variant="success" 
@@ -380,7 +395,7 @@ const copyAddress = () => {
                       />
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      ≈ {sellAmount && token.price > 0 ? (parseFloat(sellAmount) / token.price).toFixed(0) : '0'} {token.symbol}
+                      ≈ {sellAmount && tokenPriceSOL > 0 ? (parseFloat(sellAmount) / tokenPriceSOL).toFixed(0) : '0'} {token.symbol}
                     </div>
                     <Button 
                       variant="danger" 
@@ -410,7 +425,7 @@ const copyAddress = () => {
                   >
                     <span>{amount} SOL</span>
                     <span className="text-muted-foreground">
-                      ≈{formatNumber(amount / token.price)} {token.symbol}
+                      ≈{tokenPriceSOL > 0 ? formatNumber(amount / tokenPriceSOL) : '0'} {token.symbol}
                     </span>
                   </Button>
                 ))}
