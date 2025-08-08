@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Connection, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
-import { useSolanaWallets } from '@privy-io/react-auth/solana';
-import { usePrivy } from '@privy-io/react-auth';
-
-const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 
 export interface WalletBalance {
   sol: number;
@@ -12,8 +9,8 @@ export interface WalletBalance {
 }
 
 export const useWalletBalance = (): WalletBalance => {
-  const { authenticated } = usePrivy();
-  const { wallets } = useSolanaWallets();
+  const { connection } = useConnection();
+  const { publicKey, connected } = useWallet();
   const [balance, setBalance] = useState<WalletBalance>({
     sol: 0,
     isLoading: false,
@@ -21,45 +18,27 @@ export const useWalletBalance = (): WalletBalance => {
   });
 
   useEffect(() => {
-    console.log('Wallet debug:', { authenticated, wallets, firstWallet: wallets[0] });
-    
-    const wallet = wallets[0];
-    const address = wallet?.address;
-    
-    if (!authenticated || !wallets.length || !address) {
-      setBalance({ sol: 0, isLoading: false, error: null });
-      return;
-    }
-
     const fetchBalance = async () => {
+      if (!connected || !publicKey) {
+        setBalance({ sol: 0, isLoading: false, error: null });
+        return;
+      }
+
       setBalance(prev => ({ ...prev, isLoading: true, error: null }));
-      
+
       try {
-        const publicKey = new PublicKey(address);
-        const solBalance = await connection.getBalance(publicKey);
-        
-        setBalance({
-          sol: solBalance / LAMPORTS_PER_SOL,
-          isLoading: false,
-          error: null,
-        });
+        const lamports = await connection.getBalance(publicKey);
+        setBalance({ sol: lamports / LAMPORTS_PER_SOL, isLoading: false, error: null });
       } catch (error) {
         console.error('Failed to fetch wallet balance:', error);
-        setBalance({
-          sol: 0,
-          isLoading: false,
-          error: 'Failed to fetch balance',
-        });
+        setBalance({ sol: 0, isLoading: false, error: 'Failed to fetch balance' });
       }
     };
 
     fetchBalance();
-    
-    // Refresh balance every 30 seconds
     const interval = setInterval(fetchBalance, 30000);
-    
     return () => clearInterval(interval);
-  }, [authenticated, wallets]);
+  }, [connected, publicKey, connection]);
 
   return balance;
 };

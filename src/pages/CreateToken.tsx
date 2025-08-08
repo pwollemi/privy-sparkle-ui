@@ -7,11 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Upload, Rocket, AlertCircle, Wallet } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSolanaProgram } from '@/lib/solana-program';
-import { usePrivy } from '@privy-io/react-auth';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
 const CreateToken = () => {
   const { toast } = useToast();
-  const { login, authenticated } = usePrivy();
+  const { connected } = useWallet();
   const { createTokenPool, isConnected, walletAddress } = useSolanaProgram();
   const [isCreating, setIsCreating] = React.useState(false);
   const [formData, setFormData] = React.useState({
@@ -238,7 +239,7 @@ const CreateToken = () => {
               </CardContent>
             </Card>
 
-            {!authenticated ? (
+            {!connected ? (
               <Card className="bg-card/50 border-primary/20">
                 <CardContent className="pt-6">
                   <div className="flex items-start gap-3">
@@ -248,9 +249,7 @@ const CreateToken = () => {
                       <p className="text-muted-foreground mb-3">
                         Connect your Solana wallet to create and deploy tokens on-chain.
                       </p>
-                      <Button onClick={login} variant="outline" size="sm">
-                        Connect Wallet
-                      </Button>
+                      <WalletMultiButton />
                     </div>
                   </div>
                 </CardContent>

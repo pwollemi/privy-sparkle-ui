@@ -1,5 +1,4 @@
-import { usePrivy } from '@privy-io/react-auth';
-import { useSolanaWallets } from '@privy-io/react-auth/solana';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction } from '@solana/spl-token';
 import programIdl from './program-idl.json';
@@ -30,24 +29,14 @@ export interface PoolCreationResult {
 }
 
 export const useSolanaProgram = () => {
-  const { user, authenticated } = usePrivy();
-  const { wallets: solanaWallets } = useSolanaWallets();
-
-  const getWallet = () => {
-    if (!authenticated || !solanaWallets.length) {
-      throw new Error('No Solana wallet connected');
-    }
-    return solanaWallets[0];
-  };
+  const { publicKey, connected, sendTransaction } = useWallet();
 
   const createTokenPool = async (params: TokenCreationParams): Promise<PoolCreationResult> => {
-    const wallet = getWallet();
-    
-    if (!wallet.address) {
+    if (!publicKey) {
       throw new Error('Wallet not connected');
     }
 
-    const walletPublicKey = new PublicKey(wallet.address);
+    const walletPublicKey = publicKey;
 
     try {
       // Generate keypairs for new accounts
@@ -135,14 +124,8 @@ export const useSolanaProgram = () => {
         data: instructionData,
       });
 
-      // Get recent blockhash
-      const { blockhash } = await connection.getLatestBlockhash();
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = walletPublicKey;
-
-      // Sign and send transaction
-      const signedTransaction = await wallet.signTransaction(transaction);
-      const signature = await connection.sendRawTransaction(signedTransaction.serialize());
+      // Send transaction via wallet adapter
+      const signature = await sendTransaction(transaction, connection);
       
       // Confirm transaction
       await connection.confirmTransaction(signature, 'confirmed');
@@ -186,7 +169,7 @@ export const useSolanaProgram = () => {
     createTokenPool,
     buyToken,
     sellToken,
-    isConnected: authenticated && solanaWallets.length > 0,
-    walletAddress: solanaWallets[0]?.address,
+    isConnected: connected && !!publicKey,
+    walletAddress: publicKey?.toBase58(),
   };
 };

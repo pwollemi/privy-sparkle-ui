@@ -1,14 +1,14 @@
 import React from 'react';
-import { usePrivy } from '@privy-io/react-auth';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Wallet, TrendingUp, Plus, User, LogOut, Coins, Copy } from 'lucide-react';
+import { Wallet, Plus, User, LogOut, Coins, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { useWalletBalance } from '@/hooks/useWalletBalance';
-import { useSolanaWallets } from '@privy-io/react-auth/solana';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
 const Header = () => {
   const { ready, authenticated, user, login, logout } = usePrivy();
@@ -52,7 +52,7 @@ const Header = () => {
           </nav>
 
           <div className="flex items-center gap-3">
-            {authenticated && wallets.length > 0 && (
+            {connected && (
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg">
                 <Coins className="h-4 w-4 text-primary" />
                 <span className="text-sm font-medium">
@@ -71,7 +71,7 @@ const Header = () => {
               Create
             </Button>
             
-            {authenticated ? (
+            {connected ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="h-10 w-10 rounded-full p-0">
@@ -88,20 +88,19 @@ const Header = () => {
                     <div className="mt-1 flex items-center gap-2">
                       <div className="text-xs text-muted-foreground font-mono">
                         {(() => {
-                          const wallet = wallets[0];
-                          const address = wallet?.address || 'No address';
+                          const address = publicKey?.toBase58() || 'No address';
                           return address.length > 20 ? 
                             (address.slice(0, 8) + '...' + address.slice(-8)) :
                             address;
                         })()}
                       </div>
-                      {wallets[0]?.address && (
+                      {publicKey && (
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6"
                           onClick={() => {
-                            const addr = wallets[0]?.address;
+                            const addr = publicKey?.toBase58();
                             if (addr) {
                               navigator.clipboard.writeText(addr);
                               toast({
@@ -131,22 +130,14 @@ const Header = () => {
                   
                   <DropdownMenuSeparator />
                   
-                  <DropdownMenuItem onClick={logout} className="text-destructive hover:bg-destructive/10">
+                  <DropdownMenuItem onClick={disconnect} className="text-destructive hover:bg-destructive/10">
                     <LogOut className="h-4 w-4 mr-2" />
                     Disconnect
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button
-                variant="neon"
-                onClick={login}
-                disabled={!ready}
-                className="min-w-[120px]"
-              >
-                <Wallet className="h-4 w-4" />
-                Connect
-              </Button>
+              <WalletMultiButton className="min-w-[120px]" />
             )}
           </div>
         </div>
