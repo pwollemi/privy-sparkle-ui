@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Wallet, TrendingUp, Plus, User, LogOut, Coins } from 'lucide-react';
+import { Wallet, TrendingUp, Plus, User, LogOut, Coins, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from '@/hooks/use-toast';
 import { useWalletBalance } from '@/hooks/useWalletBalance';
 import { useSolanaWallets } from '@privy-io/react-auth/solana';
 
@@ -84,15 +85,36 @@ const Header = () => {
                 <DropdownMenuContent align="end" className="w-56 bg-popover border-border shadow-lg">
                   <div className="px-3 py-2 text-sm">
                     <div className="font-medium text-foreground">Wallet Address</div>
-                    <div className="text-xs text-muted-foreground font-mono">
-                      {(() => {
-                        // Get wallet address
-                        const wallet = wallets[0];
-                        const address = wallet?.address || 'No address';
-                        return address.length > 20 ? 
-                          (address.slice(0, 8) + '...' + address.slice(-8)) :
-                          address;
-                      })()}
+                    <div className="mt-1 flex items-center gap-2">
+                      <div className="text-xs text-muted-foreground font-mono">
+                        {(() => {
+                          const wallet = wallets[0];
+                          const address = wallet?.address || 'No address';
+                          return address.length > 20 ? 
+                            (address.slice(0, 8) + '...' + address.slice(-8)) :
+                            address;
+                        })()}
+                      </div>
+                      {wallets[0]?.address && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => {
+                            const addr = wallets[0]?.address;
+                            if (addr) {
+                              navigator.clipboard.writeText(addr);
+                              toast({
+                                title: 'Copied',
+                                description: 'Wallet address copied to clipboard',
+                              });
+                            }
+                          }}
+                          aria-label="Copy wallet address"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                   
