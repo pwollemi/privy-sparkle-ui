@@ -19,6 +19,9 @@ import {
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
+import { DynamicBondingCurveClient } from '@meteora-ag/dynamic-bonding-curve-sdk';
+import { connection } from '@/lib/solana-program';
+import { PublicKey } from '@solana/web3.js';
 
 const TokenDetail = () => {
   const { id } = useParams();
@@ -28,6 +31,7 @@ const TokenDetail = () => {
   const [sellAmount, setSellAmount] = React.useState('');
   const [dbToken, setDbToken] = React.useState<any | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [virtualPool, setVirtualPool] = React.useState<any | null>(null);
 
   React.useEffect(() => {
     const fetchToken = async () => {
@@ -48,6 +52,21 @@ const TokenDetail = () => {
     };
     fetchToken();
   }, [id]);
+
+  React.useEffect(() => {
+    const fetchVirtualPool = async () => {
+      try {
+        if (!dbToken?.pool_address) return;
+        const client = new DynamicBondingCurveClient(connection, 'confirmed');
+        const state = await client.state.getPool(new PublicKey(dbToken.pool_address));
+        setVirtualPool((state as any)?.account ?? state ?? null);
+      } catch (e) {
+        console.error('Failed to load virtual pool', e);
+        setVirtualPool(null);
+      }
+    };
+    fetchVirtualPool();
+  }, [dbToken?.pool_address]);
 
   if (loading) {
     return (
