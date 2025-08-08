@@ -27,6 +27,14 @@ export interface PoolCreationResult {
   signature: string;
   poolAddress: string;
   tokenMint: string;
+  poolDetails?: {
+    pool: string;
+    config?: string;
+    creator?: string;
+    baseMint: string;
+    poolType?: number;
+    activationPoint?: string;
+  };
 }
 
 export const useSolanaProgram = () => {
@@ -67,13 +75,28 @@ export const useSolanaProgram = () => {
       await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature });
 
       // Fetch created pool by base mint
-      const created = await client.state.getPoolByBaseMint(baseMintKeypair.publicKey);
-      const poolAddress = created ? created.publicKey.toBase58() : '';
+      const created: any = await client.state.getPoolByBaseMint(baseMintKeypair.publicKey);
+      const poolAddress = created ? (created.publicKey?.toBase58?.() ?? created.publicKey?.toString?.() ?? '') : '';
+      const acc = created?.account ?? created;
+      const poolDetails = created
+        ? {
+            pool: created.publicKey?.toBase58?.() ?? poolAddress,
+            config: acc?.config?.toBase58?.() ?? acc?.config?.toString?.(),
+            creator:
+              acc?.poolCreator?.toBase58?.() ??
+              acc?.creator?.toBase58?.() ??
+              acc?.creator?.toString?.(),
+            baseMint: baseMintKeypair.publicKey.toBase58(),
+            poolType: Number(acc?.poolType ?? acc?.pool_type ?? 0),
+            activationPoint: String(acc?.activationPoint ?? acc?.activation_point ?? ''),
+          }
+        : undefined;
 
       return {
         signature,
         poolAddress,
         tokenMint: baseMintKeypair.publicKey.toBase58(),
+        poolDetails,
       };
     } catch (error) {
       console.error('Error creating token pool:', error);

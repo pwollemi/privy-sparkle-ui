@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSolanaProgram } from '@/lib/solana-program';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-
+import { supabase } from "@/integrations/supabase/client";
 const CreateToken = () => {
   const { toast } = useToast();
   const { connected } = useWallet();
@@ -69,6 +69,34 @@ const CreateToken = () => {
         twitter: formData.twitter,
         telegram: formData.telegram,
       });
+
+      // Store token + pool details in Supabase
+      const { error: dbError } = await supabase.from('tokens').insert({
+        name: formData.name,
+        symbol: formData.symbol,
+        description: formData.description,
+        image_url: null,
+        initial_supply: parseInt(formData.initialSupply) || 1000000000,
+        website: formData.website || null,
+        twitter: formData.twitter || null,
+        telegram: formData.telegram || null,
+        pool_address: result.poolAddress,
+        config: result.poolDetails?.config ?? null,
+        creator: result.poolDetails?.creator ?? walletAddress ?? null,
+        base_mint: result.tokenMint,
+        pool_type: result.poolDetails?.poolType ?? null,
+        activation_point: result.poolDetails?.activationPoint ? Number(result.poolDetails.activationPoint) : null,
+        tx_signature: result.signature,
+      });
+
+      if (dbError) {
+        console.error('Supabase insert error:', dbError);
+        toast({
+          title: "Saved on-chain, failed to save to Discover",
+          description: dbError.message,
+          variant: "destructive",
+        });
+      }
 
       toast({
         title: "Token Created Successfully! 🚀",

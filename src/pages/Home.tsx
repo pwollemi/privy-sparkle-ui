@@ -2,18 +2,61 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import TokenCard from '@/components/TokenCard';
-import { mockTokens } from '@/data/mockTokens';
+import { supabase } from "@/integrations/supabase/client";
 import { Search, TrendingUp, Zap, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [tokens, setTokens] = React.useState<any[]>([]);
 
-  const filteredTokens = mockTokens.filter(token =>
-    token.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    token.symbol.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  React.useEffect(() => {
+    const fetchTokens = async () => {
+      const { data, error } = await supabase
+        .from('tokens')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error) setTokens(data ?? []);
+      else console.error('Failed to load tokens', error);
+    };
+    fetchTokens();
+
+    const channel = supabase
+      .channel('public:tokens')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'tokens' },
+        (payload) => {
+          setTokens((prev) => [payload.new as any, ...prev]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const cards = tokens
+    .map((t) => ({
+      id: t.base_mint,
+      name: t.name,
+      symbol: t.symbol,
+      description: t.description ?? '',
+      image: t.image_url ?? '/placeholder.svg',
+      price: 0,
+      change24h: 0,
+      marketCap: 0,
+      holders: 0,
+      createdAt: new Date(t.created_at).toLocaleDateString(),
+      creator: t.creator ?? '',
+    }))
+    .filter(
+      (token) =>
+        token.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        token.symbol.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
   return (
     <div className="min-h-screen">
@@ -99,12 +142,12 @@ const Home = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTokens.map((token) => (
+            {cards.map((token) => (
               <TokenCard key={token.id} token={token} />
             ))}
           </div>
 
-          {filteredTokens.length === 0 && (
+          {cards.length === 0 && (
             <div className="text-center py-12">
               <p className="text-muted-foreground text-lg">No tokens found matching your search.</p>
             </div>
