@@ -70,12 +70,33 @@ const CreateToken = () => {
         telegram: formData.telegram,
       });
 
+      // Upload image to Supabase Storage (if provided)
+      let imageUrl: string | null = null;
+      if (formData.image) {
+        const file = formData.image;
+        const ext = file.name.split('.').pop() || 'png';
+        const path = `${result.tokenMint}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from('token-images')
+          .upload(path, file, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: file.type || 'image/png',
+          });
+        if (uploadError) {
+          console.error('Image upload failed:', uploadError);
+        } else {
+          const { data } = supabase.storage.from('token-images').getPublicUrl(path);
+          imageUrl = data.publicUrl;
+        }
+      }
+
       // Store token + pool details in Supabase
       const { error: dbError } = await supabase.from('tokens').insert({
         name: formData.name,
         symbol: formData.symbol,
         description: formData.description,
-        image_url: null,
+        image_url: imageUrl,
         initial_supply: parseInt(formData.initialSupply) || 1000000000,
         website: formData.website || null,
         twitter: formData.twitter || null,

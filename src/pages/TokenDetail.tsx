@@ -295,7 +295,9 @@ const copyAddress = () => {
                   </div>
                   <div className="space-y-1">
                     <div className="text-sm text-muted-foreground">Creator</div>
-                    <div className="text-lg font-semibold font-mono text-sm">{token.creator}</div>
+                    <div className="text-lg font-semibold font-mono text-sm" title={token.creator}>
+                      {token.creator ? `${token.creator.slice(0,4)}...${token.creator.slice(-4)}` : '-'}
+                    </div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-sm text-muted-foreground">Created</div>
