@@ -14,7 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      tokens: {
+        Row: {
+          activation_point: number | null
+          base_mint: string
+          config: string | null
+          created_at: string
+          creator: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          initial_supply: number | null
+          name: string
+          pool_address: string
+          pool_type: number | null
+          symbol: string
+          telegram: string | null
+          twitter: string | null
+          tx_signature: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          activation_point?: number | null
+          base_mint: string
+          config?: string | null
+          created_at?: string
+          creator?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          initial_supply?: number | null
+          name: string
+          pool_address: string
+          pool_type?: number | null
+          symbol: string
+          telegram?: string | null
+          twitter?: string | null
+          tx_signature?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          activation_point?: number | null
+          base_mint?: string
+          config?: string | null
+          created_at?: string
+          creator?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          initial_supply?: number | null
+          name?: string
+          pool_address?: string
+          pool_type?: number | null
+          symbol?: string
+          telegram?: string | null
+          twitter?: string | null
+          tx_signature?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
