@@ -5,11 +5,15 @@ import TokenCard from '@/components/TokenCard';
 import { supabase } from "@/integrations/supabase/client";
 import { Search, TrendingUp, Zap, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { DynamicBondingCurveClient } from '@meteora-ag/dynamic-bonding-curve-sdk';
+import { connection } from '@/lib/solana-program';
+import { PublicKey } from '@solana/web3.js';
 
 const Home = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [tokens, setTokens] = React.useState<any[]>([]);
+  const [priceMap, setPriceMap] = React.useState<Record<string, number>>({});
 
   React.useEffect(() => {
     const fetchTokens = async () => {
@@ -38,6 +42,40 @@ const Home = () => {
     };
   }, []);
 
+  React.useEffect(() => {
+    let cancelled = false;
+    const loadPrices = async () => {
+      if (!tokens.length) {
+        setPriceMap({});
+        return;
+      }
+      try {
+        const client = new DynamicBondingCurveClient(connection, 'confirmed');
+        const entries = await Promise.all(tokens.map(async (t) => {
+          if (!t.pool_address) return [t.base_mint as string, 0] as const;
+          try {
+            const state = await client.state.getPool(new PublicKey(t.pool_address));
+            const sqrt: any = (state as any)?.account?.sqrtPrice ?? (state as any)?.sqrtPrice;
+            const n = Number(sqrt?.toString?.() ?? sqrt);
+            const price = !n || !isFinite(n) ? 0 : n / 2 ** 63;
+            return [t.base_mint as string, price] as const;
+          } catch {
+            return [t.base_mint as string, 0] as const;
+          }
+        }));
+        if (!cancelled) {
+          const map: Record<string, number> = {};
+          for (const [k, v] of entries) map[k] = v;
+          setPriceMap(map);
+        }
+      } catch (e) {
+        console.error('Failed to compute prices', e);
+      }
+    };
+    loadPrices();
+    return () => { cancelled = true; };
+  }, [tokens]);
+
   const cards = tokens
     .map((t) => ({
       id: t.base_mint,
@@ -45,7 +83,7 @@ const Home = () => {
       symbol: t.symbol,
       description: t.description ?? '',
       image: t.image_url ?? '/placeholder.svg',
-      price: 0,
+      price: priceMap[t.base_mint] ?? 0,
       change24h: 0,
       marketCap: 0,
       holders: 0,

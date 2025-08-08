@@ -52,7 +52,7 @@ const TokenCard: React.FC<TokenCardProps> = ({ token }) => {
             <p className="text-sm text-muted-foreground">${token.symbol}</p>
           </div>
           <div className="text-right">
-            <p className="text-sm font-medium text-foreground">${formatPrice(token.price)}</p>
+            <p className="text-sm font-medium text-foreground">{formatPrice(token.price)} SOL</p>
             <div className={`flex items-center gap-1 text-xs ${
               isPositive ? 'text-pump-success' : 'text-pump-danger'
             }`}>
