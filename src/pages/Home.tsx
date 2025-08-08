@@ -104,7 +104,7 @@ const Home = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             <div className="bg-card/50 p-6 rounded-lg border border-border backdrop-blur-sm">
-              <div className="text-3xl font-bold text-primary mb-2">10,000+</div>
+              <div className="text-3xl font-bold text-primary mb-2">{tokens.length.toLocaleString()}</div>
               <div className="text-muted-foreground">Tokens Launched</div>
             </div>
             <div className="bg-card/50 p-6 rounded-lg border border-border backdrop-blur-sm">

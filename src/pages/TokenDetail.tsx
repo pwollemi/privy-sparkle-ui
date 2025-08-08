@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { mockTokens } from '@/data/mockTokens';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -26,10 +26,40 @@ const TokenDetail = () => {
   const { toast } = useToast();
   const [buyAmount, setBuyAmount] = React.useState('');
   const [sellAmount, setSellAmount] = React.useState('');
+  const [dbToken, setDbToken] = React.useState<any | null>(null);
+  const [loading, setLoading] = React.useState(true);
 
-  const token = mockTokens.find(t => t.id === id);
+  React.useEffect(() => {
+    const fetchToken = async () => {
+      if (!id) return;
+      const { data, error } = await supabase
+        .from('tokens')
+        .select('*')
+        .eq('base_mint', id)
+        .maybeSingle();
+      if (error) {
+        console.error('Failed to load token', error);
+      }
+      setDbToken(data ?? null);
+      setLoading(false);
+      if (data?.name) {
+        document.title = `${data.name} (${data.symbol}) | Coinporate`;
+      }
+    };
+    fetchToken();
+  }, [id]);
 
-  if (!token) {
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Loading token...</h1>
+        </div>
+      </div>
+    );
+  }
+
+  if (!dbToken) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -39,6 +69,32 @@ const TokenDetail = () => {
       </div>
     );
   }
+
+  const token = {
+    id: dbToken.base_mint as string,
+    name: dbToken.name as string,
+    symbol: dbToken.symbol as string,
+    description: (dbToken.description as string) ?? '',
+    image: (dbToken.image_url as string) ?? '/placeholder.svg',
+    price: 0,
+    change24h: 0,
+    marketCap: 0,
+    holders: 0,
+    createdAt: new Date(dbToken.created_at).toLocaleDateString(),
+    creator: (dbToken.creator as string) ?? '',
+    totalSupply: Number(dbToken.initial_supply ?? 0),
+    circulatingSupply: Number(dbToken.initial_supply ?? 0),
+    volume24h: 0,
+    liquidity: 0,
+    priceHistory: Array.from({ length: 24 }).map((_, i) => ({ time: `${i}:00`, price: 0 })),
+    baseMint: dbToken.base_mint as string,
+    poolType: dbToken.pool_type as number | null,
+    activationPoint: dbToken.activation_point as number | null,
+    poolAddress: dbToken.pool_address as string | null,
+  } as const;
+
+  const bondingCurveStatus =
+    token.poolAddress ? (token.activationPoint ? 'Active' : 'Pending Activation') : 'Not Created';
 
   const isPositive = token.change24h >= 0;
 
@@ -53,13 +109,13 @@ const TokenDetail = () => {
     return num.toFixed(0);
   };
 
-  const copyAddress = () => {
-    navigator.clipboard.writeText('0x1234567890abcdef...');
-    toast({
-      title: "Address Copied!",
-      description: "Token contract address copied to clipboard",
-    });
-  };
+const copyAddress = () => {
+  navigator.clipboard.writeText(token.baseMint);
+  toast({
+    title: "Address Copied!",
+    description: "Token mint address copied to clipboard",
+  });
+};
 
   const handleTrade = (type: 'buy' | 'sell') => {
     const amount = type === 'buy' ? buyAmount : sellAmount;
@@ -113,14 +169,31 @@ const TokenDetail = () => {
                     <p className="text-muted-foreground mb-4">{token.description}</p>
                     
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>Contract:</span>
-                      <code className="bg-muted px-2 py-1 rounded text-xs">0x1234...abcd</code>
-                      <Button variant="ghost" size="sm" onClick={copyAddress}>
+                      <span>Mint:</span>
+                      <code className="bg-muted px-2 py-1 rounded text-xs">
+                        {token.baseMint.slice(0, 4)}...{token.baseMint.slice(-4)}
+                      </code>
+                      <Button variant="ghost" size="sm" onClick={copyAddress} aria-label="Copy mint address">
                         <Copy className="h-3 w-3" />
                       </Button>
-                      <Button variant="ghost" size="sm">
-                        <ExternalLink className="h-3 w-3" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        asChild
+                        aria-label="View on Solana Explorer"
+                      >
+                        <a
+                          href={`https://explorer.solana.com/address/${token.baseMint}?cluster=devnet`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
                       </Button>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-sm text-muted-foreground">Bonding Curve:</span>
+                      <Badge variant="secondary">{bondingCurveStatus}</Badge>
                     </div>
                   </div>
                 </div>
@@ -262,7 +335,7 @@ const TokenDetail = () => {
                       />
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      ≈ {buyAmount ? (parseFloat(buyAmount) / token.price).toFixed(0) : '0'} {token.symbol}
+                      ≈ {buyAmount && token.price > 0 ? (parseFloat(buyAmount) / token.price).toFixed(0) : '0'} {token.symbol}
                     </div>
                     <Button 
                       variant="success" 
@@ -286,7 +359,7 @@ const TokenDetail = () => {
                       />
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      ≈ {sellAmount ? (parseFloat(sellAmount) / token.price).toFixed(0) : '0'} {token.symbol}
+                      ≈ {sellAmount && token.price > 0 ? (parseFloat(sellAmount) / token.price).toFixed(0) : '0'} {token.symbol}
                     </div>
                     <Button 
                       variant="danger" 
