@@ -16,6 +16,8 @@ const Header = () => {
   const { sol, isLoading } = useWalletBalance();
   const navigate = useNavigate();
 
+  const formatSol = (n: number) => n.toFixed(3).replace(/\.?0+$/, '');
+
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4">
@@ -24,9 +26,7 @@ const Header = () => {
             className="flex items-center gap-2 cursor-pointer group"
             onClick={() => navigate('/')}
           >
-            <div className="bg-gradient-primary p-2 rounded-lg shadow-neon-primary group-hover:shadow-neon-accent transition-all duration-300">
-              <TrendingUp className="h-6 w-6 text-primary-foreground" />
-            </div>
+            <img src="/lovable-uploads/d7289dab-a2cc-449c-98ba-122fe402fd71.png" alt="Coinporate logo" className="h-7 w-auto" />
             <span className="text-2xl font-bold gradient-text">Coinporate</span>
           </div>
 
@@ -56,7 +56,7 @@ const Header = () => {
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg">
                 <Coins className="h-4 w-4 text-primary" />
                 <span className="text-sm font-medium">
-                  {isLoading ? '...' : `${sol.toFixed(4)} SOL`}
+                  {isLoading ? '...' : `${formatSol(sol)} SOL`}
                 </span>
               </div>
             )}
@@ -124,7 +124,7 @@ const Header = () => {
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">SOL Balance</span>
                       <Badge variant="secondary" className="font-mono">
-                        {isLoading ? '...' : `${sol.toFixed(4)} SOL`}
+                        {isLoading ? '...' : `${formatSol(sol)} SOL`}
                       </Badge>
                     </div>
                   </div>
