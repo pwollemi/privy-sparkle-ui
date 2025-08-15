@@ -169,10 +169,17 @@ export const useSolanaProgram = () => {
       const signature = await sendTransaction(transaction, connection, { minContextSlot });
       await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature });
 
-      // Calculate and record price after successful buy
-      const poolAccount = (poolState as any)?.account ?? poolState;
-      const currentPrice = poolAccount?.sqrtPrice ? Number(poolAccount.sqrtPrice.toString()) / (2 ** 63) : 0;
-      await recordPriceHistory(baseMint.toString(), currentPrice, 'buy', signature, solAmount);
+      // Calculate current price from pool state and record it
+      try {
+        const updatedPoolState = await client.state.getPool(poolPubkey);
+        const updatedAccount = (updatedPoolState as any)?.account ?? updatedPoolState;
+        const currentPrice = updatedAccount?.sqrtPrice ? Number(updatedAccount.sqrtPrice.toString()) / (2 ** 63) : 0;
+        
+        console.log('Recording buy price:', currentPrice, 'SOL for token:', baseMint.toString());
+        await recordPriceHistory(baseMint.toString(), currentPrice, 'buy', signature, solAmount);
+      } catch (priceError) {
+        console.error('Failed to record price after buy:', priceError);
+      }
 
       return signature;
     } catch (error) {
@@ -232,11 +239,18 @@ export const useSolanaProgram = () => {
       const signature = await sendTransaction(transaction, connection, { minContextSlot });
       await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature });
 
-      // Calculate and record price after successful sell
-      const sellPoolAccount = (poolState as any)?.account ?? poolState;
-      const currentPrice = sellPoolAccount?.sqrtPrice ? Number(sellPoolAccount.sqrtPrice.toString()) / (2 ** 63) : 0;
-      const tokenValue = tokenAmount * currentPrice; // Approximate SOL value
-      await recordPriceHistory(baseMint.toString(), currentPrice, 'sell', signature, tokenValue);
+      // Calculate current price from pool state and record it
+      try {
+        const updatedPoolState = await client.state.getPool(poolPubkey);
+        const updatedAccount = (updatedPoolState as any)?.account ?? updatedPoolState;
+        const currentPrice = updatedAccount?.sqrtPrice ? Number(updatedAccount.sqrtPrice.toString()) / (2 ** 63) : 0;
+        const tokenValue = tokenAmount * currentPrice;
+        
+        console.log('Recording sell price:', currentPrice, 'SOL for token:', baseMint.toString());
+        await recordPriceHistory(baseMint.toString(), currentPrice, 'sell', signature, tokenValue);
+      } catch (priceError) {
+        console.error('Failed to record price after sell:', priceError);
+      }
 
       return signature;
     } catch (error) {

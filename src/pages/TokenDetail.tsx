@@ -115,51 +115,53 @@ const TokenDetail = () => {
   }, [fetchTokenBalance]);
 
   // Fetch price history from database
-  React.useEffect(() => {
-    const fetchPriceHistory = async () => {
-      if (!id) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('price_history')
-          .select('*')
-          .eq('token_mint', id)
-          .order('timestamp', { ascending: true })
-          .limit(100); // Get last 100 price points
+  const fetchPriceHistory = React.useCallback(async () => {
+    if (!id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('price_history')
+        .select('*')
+        .eq('token_mint', id)
+        .order('timestamp', { ascending: true })
+        .limit(100); // Get last 100 price points
 
-        if (error) {
-          console.error('Failed to fetch price history:', error);
-          return;
-        }
+      if (error) {
+        console.error('Failed to fetch price history:', error);
+        return;
+      }
 
-        if (data && data.length > 0) {
-          const formattedHistory = data.map((entry, index) => ({
-            time: new Date(entry.timestamp).toLocaleTimeString('en-US', { 
-              hour: '2-digit', 
-              minute: '2-digit',
-              hour12: false 
-            }),
-            price: Number(entry.price_sol) || 0,
-          }));
-          setPriceHistory(formattedHistory);
-        } else {
-          // Create dummy data if no history exists
-          setPriceHistory(Array.from({ length: 24 }).map((_, i) => ({ 
-            time: `${i}:00`, 
-            price: 0 
-          })));
-        }
-      } catch (error) {
-        console.error('Error fetching price history:', error);
+      console.log('Fetched price history:', data);
+
+      if (data && data.length > 0) {
+        const formattedHistory = data.map((entry, index) => ({
+          time: new Date(entry.timestamp).toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: false 
+          }),
+          price: Number(entry.price_sol) || 0,
+        }));
+        setPriceHistory(formattedHistory);
+      } else {
+        // Create dummy data if no history exists
         setPriceHistory(Array.from({ length: 24 }).map((_, i) => ({ 
           time: `${i}:00`, 
           price: 0 
         })));
       }
-    };
-
-    fetchPriceHistory();
+    } catch (error) {
+      console.error('Error fetching price history:', error);
+      setPriceHistory(Array.from({ length: 24 }).map((_, i) => ({ 
+        time: `${i}:00`, 
+        price: 0 
+      })));
+    }
   }, [id]);
+
+  React.useEffect(() => {
+    fetchPriceHistory();
+  }, [fetchPriceHistory]);
 
   React.useEffect(() => {
     fetchTokenBalance();
@@ -286,10 +288,11 @@ const copyAddress = () => {
           description: `Successfully bought ${token.symbol} with ${amount} SOL`,
         });
         setBuyAmount('');
-        // Refresh token balance after successful buy
-        setTimeout(() => fetchTokenBalance(), 2000);
-        // Refresh price history to show new data point
-        setTimeout(() => window.location.reload(), 3000);
+        // Refresh token balance and price history after successful buy
+        setTimeout(() => {
+          fetchTokenBalance();
+          fetchPriceHistory();
+        }, 3000);
       } else {
         // For sell, we need to convert SOL amount to token amount
         const tokenAmountToSell = tokenPriceSOL > 0 ? Math.floor(amountNum / tokenPriceSOL) : 0;
@@ -299,10 +302,11 @@ const copyAddress = () => {
           description: `Successfully sold ${token.symbol} for ${amount} SOL`,
         });
         setSellAmount('');
-        // Refresh token balance after successful sell
-        setTimeout(() => fetchTokenBalance(), 2000);
-        // Refresh price history to show new data point
-        setTimeout(() => window.location.reload(), 3000);
+        // Refresh token balance and price history after successful sell
+        setTimeout(() => {
+          fetchTokenBalance();
+          fetchPriceHistory();
+        }, 3000);
       }
 
       console.log('Transaction signature:', signature);
@@ -373,8 +377,13 @@ const copyAddress = () => {
                       </Button>
                     </div>
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="text-sm text-muted-foreground">Bonding Curve:</span>
-                      <Badge variant="secondary">{bondingCurveStatus}</Badge>
+                      <span className="text-sm text-muted-foreground">Bonding Curve Process:</span>
+                      <span className="text-sm font-medium">
+                        {virtualPool
+                          ? (Number(virtualPool.quoteReserve.toString()) / 10 ** 9).toPrecision(2)
+                          : 0}{" "}
+                        SOL / 10 SOL
+                      </span>
                     </div>
                   </div>
                 </div>
