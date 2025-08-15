@@ -37,6 +37,7 @@ const TokenDetail = () => {
   const [sellAmount, setSellAmount] = React.useState('');
   const [activeTab, setActiveTab] = React.useState('buy');
   const [tokenBalance, setTokenBalance] = React.useState(0);
+  const [priceHistory, setPriceHistory] = React.useState<Array<{ time: string; price: number }>>([]);
   const [dbToken, setDbToken] = React.useState<any | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [tradingLoading, setTradingLoading] = React.useState(false);
@@ -113,6 +114,57 @@ const TokenDetail = () => {
     fetchTokenBalance();
   }, [fetchTokenBalance]);
 
+  // Fetch price history from database
+  React.useEffect(() => {
+    const fetchPriceHistory = async () => {
+      if (!id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('price_history')
+          .select('*')
+          .eq('token_mint', id)
+          .order('timestamp', { ascending: true })
+          .limit(100); // Get last 100 price points
+
+        if (error) {
+          console.error('Failed to fetch price history:', error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          const formattedHistory = data.map((entry, index) => ({
+            time: new Date(entry.timestamp).toLocaleTimeString('en-US', { 
+              hour: '2-digit', 
+              minute: '2-digit',
+              hour12: false 
+            }),
+            price: Number(entry.price_sol) || 0,
+          }));
+          setPriceHistory(formattedHistory);
+        } else {
+          // Create dummy data if no history exists
+          setPriceHistory(Array.from({ length: 24 }).map((_, i) => ({ 
+            time: `${i}:00`, 
+            price: 0 
+          })));
+        }
+      } catch (error) {
+        console.error('Error fetching price history:', error);
+        setPriceHistory(Array.from({ length: 24 }).map((_, i) => ({ 
+          time: `${i}:00`, 
+          price: 0 
+        })));
+      }
+    };
+
+    fetchPriceHistory();
+  }, [id]);
+
+  React.useEffect(() => {
+    fetchTokenBalance();
+  }, [fetchTokenBalance]);
+
   const tokenPriceSOL = React.useMemo(() => {
     const sqrt = (virtualPool as any)?.sqrtPrice;
     try {
@@ -162,7 +214,7 @@ const TokenDetail = () => {
     circulatingSupply: Number(dbToken.initial_supply ?? 0),
     volume24h: 0,
     liquidity: 0,
-    priceHistory: Array.from({ length: 24 }).map((_, i) => ({ time: `${i}:00`, price: 0 })),
+    priceHistory: priceHistory,
     baseMint: dbToken.base_mint as string,
     poolType: dbToken.pool_type as number | null,
     activationPoint: dbToken.activation_point as number | null,
@@ -236,6 +288,8 @@ const copyAddress = () => {
         setBuyAmount('');
         // Refresh token balance after successful buy
         setTimeout(() => fetchTokenBalance(), 2000);
+        // Refresh price history to show new data point
+        setTimeout(() => window.location.reload(), 3000);
       } else {
         // For sell, we need to convert SOL amount to token amount
         const tokenAmountToSell = tokenPriceSOL > 0 ? Math.floor(amountNum / tokenPriceSOL) : 0;
@@ -247,6 +301,8 @@ const copyAddress = () => {
         setSellAmount('');
         // Refresh token balance after successful sell
         setTimeout(() => fetchTokenBalance(), 2000);
+        // Refresh price history to show new data point
+        setTimeout(() => window.location.reload(), 3000);
       }
 
       console.log('Transaction signature:', signature);
@@ -372,7 +428,7 @@ const copyAddress = () => {
                       <YAxis 
                         stroke="hsl(var(--muted-foreground))"
                         fontSize={12}
-                        tickFormatter={(value) => `$${value.toFixed(6)}`}
+                        tickFormatter={(value) => `${value.toFixed(8)} SOL`}
                       />
                       <Tooltip 
                         contentStyle={{
@@ -381,14 +437,14 @@ const copyAddress = () => {
                           borderRadius: '8px'
                         }}
                         labelFormatter={(label) => `Time: ${label}`}
-                        formatter={(value: any) => [`$${value.toFixed(6)}`, 'Price']}
+                        formatter={(value: any) => [`${Number(value).toFixed(8)} SOL`, 'Price']}
                       />
                       <Line 
                         type="monotone" 
                         dataKey="price" 
                         stroke="hsl(var(--primary))" 
                         strokeWidth={3}
-                        dot={false}
+                        dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, r: 4 }}
                         activeDot={{ r: 6, fill: 'hsl(var(--primary))' }}
                       />
                     </LineChart>

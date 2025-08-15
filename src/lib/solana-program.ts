@@ -105,6 +105,22 @@ export const useSolanaProgram = () => {
     }
   };
 
+  // Function to record price data after trades
+  const recordPriceHistory = async (tokenMint: string, priceSol: number, type: 'buy' | 'sell', signature: string, volumeSol?: number) => {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      await supabase.from('price_history').insert({
+        token_mint: tokenMint,
+        price_sol: priceSol,
+        volume_sol: volumeSol || 0,
+        transaction_type: type,
+        transaction_signature: signature,
+      });
+    } catch (error) {
+      console.error('Failed to record price history:', error);
+    }
+  };
+
   const buyToken = async (poolAddress: string, solAmount: number): Promise<string> => {
     if (!publicKey) {
       throw new Error('Wallet not connected');
@@ -152,6 +168,11 @@ export const useSolanaProgram = () => {
 
       const signature = await sendTransaction(transaction, connection, { minContextSlot });
       await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature });
+
+      // Calculate and record price after successful buy
+      const poolAccount = (poolState as any)?.account ?? poolState;
+      const currentPrice = poolAccount?.sqrtPrice ? Number(poolAccount.sqrtPrice.toString()) / (2 ** 63) : 0;
+      await recordPriceHistory(baseMint.toString(), currentPrice, 'buy', signature, solAmount);
 
       return signature;
     } catch (error) {
@@ -210,6 +231,12 @@ export const useSolanaProgram = () => {
 
       const signature = await sendTransaction(transaction, connection, { minContextSlot });
       await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature });
+
+      // Calculate and record price after successful sell
+      const sellPoolAccount = (poolState as any)?.account ?? poolState;
+      const currentPrice = sellPoolAccount?.sqrtPrice ? Number(sellPoolAccount.sqrtPrice.toString()) / (2 ** 63) : 0;
+      const tokenValue = tokenAmount * currentPrice; // Approximate SOL value
+      await recordPriceHistory(baseMint.toString(), currentPrice, 'sell', signature, tokenValue);
 
       return signature;
     } catch (error) {
