@@ -47,6 +47,33 @@ export type Database = {
         }
         Relationships: []
       }
+      token_balances: {
+        Row: {
+          balance: number
+          created_at: string
+          id: string
+          last_updated: string
+          token_mint: string
+          user_wallet: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          id?: string
+          last_updated?: string
+          token_mint: string
+          user_wallet: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          id?: string
+          last_updated?: string
+          token_mint?: string
+          user_wallet?: string
+        }
+        Relationships: []
+      }
       tokens: {
         Row: {
           activation_point: number | null
@@ -57,7 +84,6 @@ export type Database = {
           description: string | null
           id: string
           image_url: string | null
-          initial_supply: number | null
           name: string
           pool_address: string
           pool_type: number | null
@@ -77,7 +103,6 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
-          initial_supply?: number | null
           name: string
           pool_address: string
           pool_type?: number | null
@@ -97,7 +122,6 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
-          initial_supply?: number | null
           name?: string
           pool_address?: string
           pool_type?: number | null

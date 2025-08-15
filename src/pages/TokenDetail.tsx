@@ -42,6 +42,8 @@ const TokenDetail = () => {
   const [loading, setLoading] = React.useState(true);
   const [tradingLoading, setTradingLoading] = React.useState(false);
   const [virtualPool, setVirtualPool] = React.useState<any | null>(null);
+  const [holdersCount, setHoldersCount] = React.useState(0);
+  const [volume24h, setVolume24h] = React.useState(0);
 
   React.useEffect(() => {
     const fetchToken = async () => {
@@ -222,6 +224,61 @@ const TokenDetail = () => {
     fetchPriceHistory();
   }, [fetchPriceHistory]);
 
+  // Fetch holders count
+  const fetchHoldersCount = React.useCallback(async () => {
+    if (!id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('token_balances')
+        .select('*', { count: 'exact' })
+        .eq('token_mint', id)
+        .gt('balance', 1); // Only count users with more than 1 token
+
+      if (error) {
+        console.error('Failed to fetch holders count:', error);
+        return;
+      }
+
+      setHoldersCount(data?.length || 0);
+    } catch (error) {
+      console.error('Error fetching holders count:', error);
+      setHoldersCount(0);
+    }
+  }, [id]);
+
+  // Fetch 24h volume in SOL
+  const fetch24hVolume = React.useCallback(async () => {
+    if (!id) return;
+    
+    try {
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      
+      const { data, error } = await supabase
+        .from('price_history')
+        .select('volume_sol')
+        .eq('token_mint', id)
+        .gte('timestamp', twentyFourHoursAgo);
+
+      if (error) {
+        console.error('Failed to fetch 24h volume:', error);
+        return;
+      }
+
+      const totalVolume = data?.reduce((sum, entry) => sum + (Number(entry.volume_sol) || 0), 0) || 0;
+      setVolume24h(totalVolume);
+    } catch (error) {
+      console.error('Error fetching 24h volume:', error);
+      setVolume24h(0);
+    }
+  }, [id]);
+
+  React.useEffect(() => {
+    fetchPriceHistory();
+    fetchHoldersCount();
+    fetch24hVolume();
+  }, [fetchPriceHistory, fetchHoldersCount, fetch24hVolume]);
+
   React.useEffect(() => {
     fetchTokenBalance();
   }, [fetchTokenBalance]);
@@ -268,13 +325,13 @@ const TokenDetail = () => {
     price: 0,
     change24h: 0,
     marketCap: 0,
-    holders: 0,
+    holders: holdersCount,
     createdAt: new Date(dbToken.created_at).toLocaleDateString(),
     creator: (dbToken.creator as string) ?? '',
-    totalSupply: Number(dbToken.initial_supply ?? 0),
-    circulatingSupply: Number(dbToken.initial_supply ?? 0),
-    volume24h: 0,
-    liquidity: 0,
+    totalSupply: 100000000, // Fixed at 100M
+    circulatingSupply: 100000000, // Fixed at 100M
+    volume24h: volume24h,
+    liquidity: virtualPool ? (Number(virtualPool.quoteReserve?.toString() || '0') / 10 ** 9) : 0, // SOL amount in pool
     priceHistory: priceHistory,
     baseMint: dbToken.base_mint as string,
     poolType: dbToken.pool_type as number | null,
@@ -347,12 +404,14 @@ const copyAddress = () => {
           description: `Successfully bought ${token.symbol} with ${amount} SOL`,
         });
         setBuyAmount('');
-        // Refresh token balance and price history after successful buy
+        // Refresh token balance, price history, and stats after successful buy
         console.log('🔄 Starting post-buy refresh in 2 seconds...');
         setTimeout(() => {
           console.log('🔄 First refresh attempt...');
           fetchTokenBalance();
           fetchPriceHistory();
+          fetchHoldersCount();
+          fetch24hVolume();
         }, 2000);
         
         // Try again after 5 seconds in case of RPC delays
@@ -374,10 +433,12 @@ const copyAddress = () => {
           description: `Successfully sold ${amount} ${token.symbol}`,
         });
         setSellAmount('');
-        // Refresh token balance and price history after successful sell
+        // Refresh token balance, price history, and stats after successful sell
         setTimeout(() => {
           fetchTokenBalance();
           fetchPriceHistory();
+          fetchHoldersCount();
+          fetch24hVolume();
         }, 3000);
       }
 
@@ -551,11 +612,15 @@ const copyAddress = () => {
                   </div>
                   <div className="space-y-1">
                     <div className="text-sm text-muted-foreground">24h Volume</div>
-                    <div className="text-lg font-semibold">${formatNumber(token.volume24h)}</div>
+                    <div className="text-lg font-semibold">{token.volume24h.toFixed(3)} SOL</div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-sm text-muted-foreground">Liquidity</div>
-                    <div className="text-lg font-semibold">${formatNumber(token.liquidity)}</div>
+                    <div className="text-lg font-semibold">{token.liquidity.toFixed(3)} SOL</div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-sm text-muted-foreground">Holders</div>
+                    <div className="text-lg font-semibold">{formatNumber(token.holders)}</div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-sm text-muted-foreground">Creator</div>

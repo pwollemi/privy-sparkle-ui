@@ -1,9 +1,10 @@
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, Keypair } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, getMint } from '@solana/spl-token';
+import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, getMint, getAccount, getAssociatedTokenAddressSync } from '@solana/spl-token';
 import programIdl from './program-idl.json';
 import { DynamicBondingCurveClient } from '@meteora-ag/dynamic-bonding-curve-sdk';
 import BN from 'bn.js';
+import { supabase } from '@/integrations/supabase/client';
 
 // Program configuration
 export const PROGRAM_ID = new PublicKey('HANVKJPfmADejWxYUVdLYn59URiZCLZvHZ3PbXkZh6Wp');
@@ -182,6 +183,9 @@ export const useSolanaProgram = () => {
         
         console.log('Recording buy price:', currentPrice, 'SOL for token:', baseMint.toString());
         await recordPriceHistory(baseMint.toString(), currentPrice, 'buy', signature, solAmount);
+        
+        // Update user's token balance in database
+        await updateUserTokenBalance(publicKey.toString(), baseMint.toString());
       } catch (priceError) {
         console.error('Failed to record price after buy:', priceError);
       }
@@ -259,6 +263,9 @@ export const useSolanaProgram = () => {
         
         console.log('Recording sell price:', currentPrice, 'SOL for token:', baseMint.toString());
         await recordPriceHistory(baseMint.toString(), currentPrice, 'sell', signature, tokenValue);
+        
+        // Update user's token balance in database
+        await updateUserTokenBalance(publicKey.toString(), baseMint.toString());
       } catch (priceError) {
         console.error('Failed to record price after sell:', priceError);
       }
@@ -277,4 +284,52 @@ export const useSolanaProgram = () => {
     isConnected: connected && !!publicKey,
     walletAddress: publicKey?.toBase58(),
   };
+}
+
+// Update user token balance in database after buy/sell
+const updateUserTokenBalance = async (userWallet: string, tokenMint: string): Promise<void> => {
+  try {
+    // Get actual balance from blockchain
+    const connection = new Connection(RPC_ENDPOINT, 'confirmed');
+    const walletPubkey = new PublicKey(userWallet);
+    const tokenMintPubkey = new PublicKey(tokenMint);
+    
+    // Determine which token program this mint uses
+    const mintAccInfo = await connection.getAccountInfo(tokenMintPubkey, 'confirmed');
+    const isToken2022 = mintAccInfo?.owner?.equals(TOKEN_2022_PROGRAM_ID) ?? false;
+    const tokenProgramId = isToken2022 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
+    
+    // Get associated token account
+    const ata = getAssociatedTokenAddressSync(tokenMintPubkey, walletPubkey, false, tokenProgramId);
+    
+    let balance = 0;
+    try {
+      const accountInfo = await getAccount(connection, ata, 'confirmed', tokenProgramId);
+      const mintInfo = await getMint(connection, tokenMintPubkey, 'confirmed', tokenProgramId);
+      balance = Number(accountInfo.amount) / Math.pow(10, mintInfo.decimals);
+    } catch (error) {
+      // Account doesn't exist, balance is 0
+      console.log('Token account not found, balance is 0');
+    }
+    
+    // Upsert balance in database
+    const { data, error } = await supabase
+      .from('token_balances')
+      .upsert({
+        user_wallet: userWallet,
+        token_mint: tokenMint,
+        balance: balance,
+        last_updated: new Date().toISOString()
+      }, {
+        onConflict: 'user_wallet,token_mint'
+      });
+      
+    if (error) {
+      console.error('Failed to update user balance:', error);
+    } else {
+      console.log('✅ Updated user balance:', balance, 'tokens for', userWallet);
+    }
+  } catch (error) {
+    console.error('Error updating user token balance:', error);
+  }
 };
