@@ -24,7 +24,7 @@ import { connection, useSolanaProgram } from '@/lib/solana-program';
 import { PublicKey } from '@solana/web3.js';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletBalance } from '@/hooks/useWalletBalance';
-import { getAssociatedTokenAddress, getAccount, getMint } from '@solana/spl-token';
+import { getAssociatedTokenAddress, getAccount, getMint, TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 
 const TokenDetail = () => {
   const { id } = useParams();
@@ -90,16 +90,27 @@ const TokenDetail = () => {
       console.log('Fetching token balance for:', id);
       // Use the token mint address from the URL (id parameter)
       const tokenMint = new PublicKey(id);
-      
-      // Get mint info for correct decimals
-      const mintInfo = await getMint(connection, tokenMint);
+
+      // Determine which token program this mint uses (Token or Token-2022)
+      const mintAccInfo = await connection.getAccountInfo(tokenMint, 'confirmed');
+      const isToken2022 = mintAccInfo?.owner?.equals(TOKEN_2022_PROGRAM_ID) ?? false;
+      const tokenProgramId = isToken2022 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
+      console.log('🔎 Token program detected:', isToken2022 ? 'Token-2022' : 'Token (legacy)');
+
+      // Get mint info for correct decimals using the detected program
+      const mintInfo = await getMint(connection, tokenMint, 'confirmed', tokenProgramId);
       const decimals = mintInfo.decimals;
-      
       console.log(`Token mint: ${id}, decimals: ${decimals}`);
-      
-      // Get user's associated token account
-      const associatedTokenAddress = await getAssociatedTokenAddress(tokenMint, publicKey);
+
+      // Get user's associated token account (program-aware)
+      const associatedTokenAddress = await getAssociatedTokenAddress(
+        tokenMint,
+        publicKey,
+        false,
+        tokenProgramId
+      );
       console.log('Associated token address:', associatedTokenAddress.toString());
+      console.log('🔍 Attempting to fetch token account...');
       console.log('🔍 Attempting to fetch token account...');
       
       try {
@@ -118,16 +129,15 @@ const TokenDetail = () => {
           dataLength: accountInfo.data.length
         });
         
-        // Check if account is owned by the Token program
-        const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
-        if (!accountInfo.owner.equals(TOKEN_PROGRAM_ID)) {
-          console.log('❌ Account is not owned by Token program. Owner:', accountInfo.owner.toString());
+        // Check if account is owned by the detected token program
+        if (!accountInfo.owner.equals(tokenProgramId)) {
+          console.log('❌ Account is not owned by expected Token program. Owner:', accountInfo.owner.toString());
           setTokenBalance(0);
           return;
         }
         
-        // Now safely use getAccount since we know it's a token account
-        const tokenAccount = await getAccount(connection, associatedTokenAddress);
+        // Now safely use getAccount with the correct program id
+        const tokenAccount = await getAccount(connection, associatedTokenAddress, 'confirmed', tokenProgramId);
         console.log('✅ Token account parsed successfully:', {
           amount: tokenAccount.amount.toString(),
           mint: tokenAccount.mint.toString(),
