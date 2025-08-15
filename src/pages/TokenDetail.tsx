@@ -79,17 +79,20 @@ const TokenDetail = () => {
 
   // Fetch user's token balance
   const fetchTokenBalance = React.useCallback(async () => {
-    if (!publicKey || !dbToken?.base_mint) {
+    if (!publicKey || !id) {
       setTokenBalance(0);
       return;
     }
 
     try {
-      const tokenMint = new PublicKey(dbToken.base_mint);
+      // Use the token mint address from the URL (id parameter)
+      const tokenMint = new PublicKey(id);
       
       // Get mint info for correct decimals
       const mintInfo = await getMint(connection, tokenMint);
       const decimals = mintInfo.decimals;
+      
+      console.log(`Token mint: ${id}, decimals: ${decimals}`);
       
       // Get user's associated token account
       const associatedTokenAddress = await getAssociatedTokenAddress(tokenMint, publicKey);
@@ -98,13 +101,13 @@ const TokenDetail = () => {
       // Calculate balance with correct decimals
       const balance = Number(tokenAccount.amount) / Math.pow(10, decimals);
       setTokenBalance(balance);
-      console.log(`Token balance: ${balance} ${dbToken.symbol}`);
+      console.log(`Token balance: ${balance} tokens`);
     } catch (error) {
       // Token account doesn't exist or error fetching
       console.log('Token account not found or error:', error);
       setTokenBalance(0);
     }
-  }, [publicKey, dbToken?.base_mint, dbToken?.symbol]);
+  }, [publicKey, id]);
 
   React.useEffect(() => {
     fetchTokenBalance();
