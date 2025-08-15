@@ -340,7 +340,7 @@ const TokenDetail = () => {
     image: (dbToken.image_url as string) ?? '/placeholder.svg',
     price: 0,
     change24h: 0,
-    marketCap: 0,
+    marketCap: tokenPriceSOL * 100000000, // price * total supply
     holders: holdersCount,
     createdAt: new Date(dbToken.created_at).toLocaleDateString(),
     creator: (dbToken.creator as string) ?? '',
@@ -620,6 +620,10 @@ const copyAddress = () => {
                   <div className="space-y-1">
                     <div className="text-sm text-muted-foreground">Total Supply</div>
                     <div className="text-lg font-semibold">{formatNumber(token.totalSupply)}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-sm text-muted-foreground">Market Cap</div>
+                    <div className="text-lg font-semibold">{token.marketCap.toFixed(3)} SOL</div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-sm text-muted-foreground">24h Volume</div>
