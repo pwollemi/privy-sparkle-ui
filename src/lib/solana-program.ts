@@ -109,9 +109,54 @@ export const useSolanaProgram = () => {
       throw new Error('Wallet not connected');
     }
 
-    // Implementation for buying tokens using swap instruction
-    // This would use the 'swap' instruction from the IDL
-    throw new Error('Buy token functionality not implemented yet');
+    try {
+      const client = new DynamicBondingCurveClient(connection, 'confirmed');
+      const poolPubkey = new PublicKey(poolAddress);
+      
+      // Get pool state to access token info
+      const poolState = await client.state.getPool(poolPubkey);
+      if (!poolState) {
+        throw new Error('Pool not found');
+      }
+
+      const account = (poolState as any)?.account ?? poolState;
+      const baseMint = account.baseMint || account.base_mint;
+      
+      if (!baseMint) {
+        throw new Error('Base mint not found in pool');
+      }
+
+      // Convert SOL amount to lamports
+      const lamports = Math.floor(solAmount * LAMPORTS_PER_SOL);
+
+      // Build swap transaction (buy) - swapping SOL for tokens
+      const transaction = await client.pool.swap({
+        pool: poolPubkey,
+        owner: publicKey,
+        payer: publicKey,
+        swapBaseForQuote: true, // true = buying tokens with SOL (base)
+        amountIn: lamports,
+        minimumAmountOut: 0, // Set to 0 for now, should calculate slippage tolerance
+        referralTokenAccount: null,
+      });
+
+      // Send transaction
+      const {
+        context: { slot: minContextSlot },
+        value: { blockhash, lastValidBlockHeight },
+      } = await connection.getLatestBlockhashAndContext();
+
+      transaction.feePayer = publicKey;
+      transaction.recentBlockhash = blockhash;
+
+      const signature = await sendTransaction(transaction, connection, { minContextSlot });
+      await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature });
+
+      return signature;
+    } catch (error) {
+      console.error('Error buying token:', error);
+      throw new Error(`Failed to buy token: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const sellToken = async (poolAddress: string, tokenAmount: number): Promise<string> => {
@@ -119,9 +164,51 @@ export const useSolanaProgram = () => {
       throw new Error('Wallet not connected');
     }
 
-    // Implementation for selling tokens using swap instruction
-    // This would use the 'swap' instruction from the IDL
-    throw new Error('Sell token functionality not implemented yet');
+    try {
+      const client = new DynamicBondingCurveClient(connection, 'confirmed');
+      const poolPubkey = new PublicKey(poolAddress);
+      
+      // Get pool state to access token info
+      const poolState = await client.state.getPool(poolPubkey);
+      if (!poolState) {
+        throw new Error('Pool not found');
+      }
+
+      const account = (poolState as any)?.account ?? poolState;
+      const baseMint = account.baseMint || account.base_mint;
+      
+      if (!baseMint) {
+        throw new Error('Base mint not found in pool');
+      }
+
+      // Build swap transaction (sell) - swapping tokens for SOL
+      const transaction = await client.pool.swap({
+        pool: poolPubkey,
+        owner: publicKey,
+        payer: publicKey,
+        swapBaseForQuote: false, // false = selling tokens for SOL (quote)
+        amountIn: tokenAmount,
+        minimumAmountOut: 0, // Set to 0 for now, should calculate slippage tolerance
+        referralTokenAccount: null,
+      });
+
+      // Send transaction
+      const {
+        context: { slot: minContextSlot },
+        value: { blockhash, lastValidBlockHeight },
+      } = await connection.getLatestBlockhashAndContext();
+
+      transaction.feePayer = publicKey;
+      transaction.recentBlockhash = blockhash;
+
+      const signature = await sendTransaction(transaction, connection, { minContextSlot });
+      await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature });
+
+      return signature;
+    } catch (error) {
+      console.error('Error selling token:', error);
+      throw new Error(`Failed to sell token: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   return {

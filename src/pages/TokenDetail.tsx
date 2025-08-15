@@ -20,17 +20,21 @@ import {
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
 import { DynamicBondingCurveClient } from '@meteora-ag/dynamic-bonding-curve-sdk';
-import { connection } from '@/lib/solana-program';
+import { connection, useSolanaProgram } from '@/lib/solana-program';
 import { PublicKey } from '@solana/web3.js';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 const TokenDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { connected } = useWallet();
+  const { buyToken, sellToken, isConnected } = useSolanaProgram();
   const [buyAmount, setBuyAmount] = React.useState('');
   const [sellAmount, setSellAmount] = React.useState('');
   const [dbToken, setDbToken] = React.useState<any | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [tradingLoading, setTradingLoading] = React.useState(false);
   const [virtualPool, setVirtualPool] = React.useState<any | null>(null);
 
   React.useEffect(() => {
@@ -148,24 +152,69 @@ const copyAddress = () => {
   });
 };
 
-  const handleTrade = (type: 'buy' | 'sell') => {
+  const handleTrade = async (type: 'buy' | 'sell') => {
     const amount = type === 'buy' ? buyAmount : sellAmount;
-    if (!amount) {
+    if (!amount || parseFloat(amount) <= 0) {
       toast({
         title: "Enter Amount",
-        description: "Please enter an amount to trade",
+        description: "Please enter a valid amount to trade",
         variant: "destructive"
       });
       return;
     }
 
-    toast({
-      title: `${type === 'buy' ? 'Buy' : 'Sell'} Order Placed! 🚀`,
-      description: `${type === 'buy' ? 'Buying' : 'Selling'} ${amount} SOL worth of ${token.symbol}`,
-    });
+    if (!isConnected) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet to trade",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    if (type === 'buy') setBuyAmount('');
-    else setSellAmount('');
+    if (!token.poolAddress) {
+      toast({
+        title: "Pool Not Available",
+        description: "Trading pool is not available for this token",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setTradingLoading(true);
+    try {
+      const amountNum = parseFloat(amount);
+      let signature: string;
+
+      if (type === 'buy') {
+        signature = await buyToken(token.poolAddress, amountNum);
+        toast({
+          title: "Buy Order Success! 🚀",
+          description: `Successfully bought ${token.symbol} with ${amount} SOL`,
+        });
+        setBuyAmount('');
+      } else {
+        // For sell, we need to convert SOL amount to token amount
+        const tokenAmountToSell = tokenPriceSOL > 0 ? Math.floor(amountNum / tokenPriceSOL) : 0;
+        signature = await sellToken(token.poolAddress, tokenAmountToSell);
+        toast({
+          title: "Sell Order Success! 💰",
+          description: `Successfully sold ${token.symbol} for ${amount} SOL`,
+        });
+        setSellAmount('');
+      }
+
+      console.log('Transaction signature:', signature);
+    } catch (error) {
+      console.error('Trade error:', error);
+      toast({
+        title: "Trade Failed",
+        description: error instanceof Error ? error.message : "Failed to execute trade",
+        variant: "destructive"
+      });
+    } finally {
+      setTradingLoading(false);
+    }
   };
 
   return (
@@ -377,8 +426,9 @@ const copyAddress = () => {
                       className="w-full" 
                       size="lg"
                       onClick={() => handleTrade('buy')}
+                      disabled={tradingLoading || !isConnected}
                     >
-                      Buy {token.symbol}
+                      {tradingLoading ? 'Processing...' : `Buy ${token.symbol}`}
                     </Button>
                   </TabsContent>
                   
@@ -401,8 +451,9 @@ const copyAddress = () => {
                       className="w-full" 
                       size="lg"
                       onClick={() => handleTrade('sell')}
+                      disabled={tradingLoading || !isConnected}
                     >
-                      Sell {token.symbol}
+                      {tradingLoading ? 'Processing...' : `Sell ${token.symbol}`}
                     </Button>
                   </TabsContent>
                 </Tabs>
