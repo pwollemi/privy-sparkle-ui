@@ -591,7 +591,7 @@ const copyAddress = () => {
             )}
 
             {/* Quick Actions */}
-            <Card className="bg-card/50 border-border">
+            <Card className="bg-card/50 border-border relative z-0">
               <CardHeader>
                 <CardTitle className="text-lg">
                   {activeTab === 'buy' ? 'Quick Buy' : 'Quick Sell'}
