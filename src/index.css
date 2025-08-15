@@ -146,20 +146,21 @@ All colors MUST be HSL.
     background-clip: text;
   }
 
-  /* Wallet button - match neon-outline button style */
+  /* Wallet button - exact match to neon-outline button variant */
   .wallet-adapter-button.wallet-button {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200;
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+    border: 2px solid hsl(var(--primary));
     background: transparent;
     color: hsl(var(--primary));
-    border: 1px solid hsl(var(--primary) / 0.5);
-    box-shadow: 0 0 20px hsl(var(--primary) / 0.1);
+    transition: all 0.3s;
+    box-shadow: var(--glow-primary);
+    height: 2.25rem;
+    padding: 0 0.75rem;
   }
 
   .wallet-adapter-button.wallet-button:hover {
-    background: hsl(var(--primary) / 0.1);
-    border-color: hsl(var(--primary));
-    box-shadow: 0 0 25px hsl(var(--primary) / 0.2);
-    transform: translateY(-1px);
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
   }
 
   .wallet-adapter-button.wallet-button:focus-visible {
@@ -172,13 +173,14 @@ All colors MUST be HSL.
 
   .wallet-adapter-button.wallet-button .wallet-adapter-button-start-icon,
   .wallet-adapter-button.wallet-button .wallet-adapter-button-end-icon {
-    filter: drop-shadow(0 0 4px currentColor);
+    pointer-events: none;
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
   }
 
   .wallet-adapter-button.wallet-button[disabled] {
+    pointer-events: none;
     opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
   }
 }
