@@ -503,7 +503,7 @@ const copyAddress = () => {
           {/* Right Column - Trading */}
           <div className="space-y-6">
             {/* Trading Panel */}
-            <Card className="bg-gradient-card border-border sticky top-8">
+            <Card className="bg-gradient-card border-border sticky top-8 z-10">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <DollarSign className="h-5 w-5" />
@@ -572,7 +572,7 @@ const copyAddress = () => {
 
             {/* Token Balance Display */}
             {isConnected && (
-              <Card className="bg-card/50 border-border">
+              <Card className="bg-card/50 border-border relative z-0">
                 <CardHeader>
                   <CardTitle className="text-lg">Your Balance</CardTitle>
                 </CardHeader>
