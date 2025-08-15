@@ -100,25 +100,53 @@ const TokenDetail = () => {
       // Get user's associated token account
       const associatedTokenAddress = await getAssociatedTokenAddress(tokenMint, publicKey);
       console.log('Associated token address:', associatedTokenAddress.toString());
+      console.log('🔍 Attempting to fetch token account...');
       
-      const tokenAccount = await getAccount(connection, associatedTokenAddress);
-      console.log('Token account data:', {
-        amount: tokenAccount.amount.toString(),
-        mint: tokenAccount.mint.toString(),
-        owner: tokenAccount.owner.toString()
-      });
-      
-      // Calculate balance with correct decimals
-      const balance = Number(tokenAccount.amount) / Math.pow(10, decimals);
-      setTokenBalance(balance);
-      console.log(`✅ Token balance updated: ${balance} tokens`);
+      try {
+        const tokenAccount = await getAccount(connection, associatedTokenAddress);
+        console.log('✅ Token account found!');
+        console.log('Token account data:', {
+          amount: tokenAccount.amount.toString(),
+          mint: tokenAccount.mint.toString(),
+          owner: tokenAccount.owner.toString(),
+          decimals: decimals
+        });
+        
+        // Calculate balance with correct decimals
+        const balance = Number(tokenAccount.amount) / Math.pow(10, decimals);
+        setTokenBalance(balance);
+        console.log(`✅ Token balance updated: ${balance} tokens`);
+        
+      } catch (tokenAccountError) {
+        console.log('❌ Token account fetch failed:', tokenAccountError);
+        
+        // Check if it's specifically a "Account not found" error
+        if (tokenAccountError && (tokenAccountError as any).message?.includes('could not find account')) {
+          console.log('🔍 Account not found - checking if account was created...');
+          
+          // Try alternative approach - check account info directly
+          try {
+            const accountInfo = await connection.getAccountInfo(associatedTokenAddress, 'confirmed');
+            console.log('Account info result:', accountInfo);
+            
+            if (!accountInfo) {
+              console.log('💡 Associated token account does not exist yet - this is normal for first-time token holders');
+            }
+          } catch (infoError) {
+            console.log('Account info check failed:', infoError);
+          }
+        }
+        
+        setTokenBalance(0);
+      }
     } catch (error) {
       // Token account doesn't exist or error fetching
-      console.log('❌ Token account error:', error);
+      console.log('❌ Overall token balance fetch error:', error);
       console.log('Error details:', {
         name: (error as any)?.name,
         message: (error as any)?.message,
-        code: (error as any)?.code
+        code: (error as any)?.code,
+        stack: (error as any)?.stack
       });
       setTokenBalance(0);
     }
