@@ -559,9 +559,9 @@ const copyAddress = () => {
                       <span className="text-sm text-muted-foreground">Bonding Curve Process:</span>
                       <span className="text-sm font-medium">
                         {virtualPool
-                          ? (Number(virtualPool.quoteReserve.toString()) / 10 ** 9).toPrecision(2)
-                          : 0}{" "}
-                        SOL / 10 SOL
+                          ? (Number(virtualPool.quoteReserve.toString()) / 10 ** 9).toFixed(2)
+                          : "0.00"}{" "}
+                        SOL / 10.00 SOL
                       </span>
                     </div>
                   </div>
@@ -570,7 +570,7 @@ const copyAddress = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
                   <div className="text-center p-3 bg-card/50 rounded-lg">
                     <div className="text-2xl font-bold text-foreground">
-                      {tokenPriceSOL ? tokenPriceSOL.toPrecision(5) : '-'} SOL
+                      {tokenPriceSOL ? tokenPriceSOL.toFixed(6) : '-'} SOL
                     </div>
                     <div className="text-xs text-muted-foreground">Price (SOL)</div>
                   </div>
@@ -583,9 +583,9 @@ const copyAddress = () => {
                     </div>
                     <div className="text-xs text-muted-foreground">24h Change</div>
                   </div>
-                  <div className="text-center p-3 bg-card/50 rounded-lg">
-                    <div className="text-2xl font-bold text-foreground">${formatNumber(token.marketCap)}</div>
-                    <div className="text-xs text-muted-foreground">Market Cap</div>
+                    <div className="text-center p-3 bg-card/50 rounded-lg">
+                      <div className="text-2xl font-bold text-foreground">${formatNumber(token.marketCap)}</div>
+                      <div className="text-xs text-muted-foreground">Market Cap</div>
                   </div>
                   <div className="text-center p-3 bg-card/50 rounded-lg">
                     <div className="text-2xl font-bold text-foreground">{formatNumber(token.holders)}</div>
@@ -655,12 +655,12 @@ const copyAddress = () => {
                   <div className="space-y-1">
                     <div className="text-sm text-muted-foreground">Market Cap</div>
                     <div className="text-lg font-semibold">
-                      {token.marketCap > 0 ? `$${formatNumber(token.marketCap)}` : '-'}
+                      {token.marketCap > 0 ? `$${(token.marketCap / 1000000).toFixed(2)}M` : '-'}
                     </div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-sm text-muted-foreground">Trading Volume (24h)</div>
-                    <div className="text-lg font-semibold">{token.volume24h.toFixed(3)} SOL</div>
+                    <div className="text-lg font-semibold">{token.volume24h.toFixed(2)} SOL</div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-sm text-muted-foreground">Active Traders (24h)</div>
@@ -672,7 +672,7 @@ const copyAddress = () => {
                   </div>
                   <div className="space-y-1">
                     <div className="text-sm text-muted-foreground">Liquidity</div>
-                    <div className="text-lg font-semibold">{token.liquidity.toFixed(3)} SOL</div>
+                    <div className="text-lg font-semibold">{token.liquidity.toFixed(2)} SOL</div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-sm text-muted-foreground">Creator</div>
@@ -743,7 +743,7 @@ const copyAddress = () => {
                       />
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      ≈ {sellAmount && tokenPriceSOL > 0 ? (parseFloat(sellAmount) * tokenPriceSOL).toFixed(6) : '0'} SOL
+                      ≈ {sellAmount && tokenPriceSOL > 0 ? (parseFloat(sellAmount) * tokenPriceSOL).toFixed(2) : '0.00'} SOL
                     </div>
                     <Button 
                       variant="danger" 
@@ -822,7 +822,7 @@ const copyAddress = () => {
                       >
                         <span>{percentage}% ({formatNumber(tokenAmount)} {token.symbol})</span>
                         <span className="text-muted-foreground">
-                          ≈{solValue > 0 ? solValue.toFixed(6) : '0.000000'} SOL
+                          ≈{solValue > 0 ? solValue.toFixed(2) : '0.00'} SOL
                         </span>
                       </Button>
                     );
