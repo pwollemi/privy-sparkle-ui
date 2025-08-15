@@ -107,7 +107,7 @@ export const useSolanaProgram = () => {
   };
 
   // Function to record price data after trades
-  const recordPriceHistory = async (tokenMint: string, priceSol: number, type: 'buy' | 'sell', signature: string, volumeSol?: number) => {
+  const recordPriceHistory = async (tokenMint: string, priceSol: number, type: 'buy' | 'sell', signature: string, userWallet: string, volumeSol?: number) => {
     try {
       const { supabase } = await import('@/integrations/supabase/client');
       await supabase.from('price_history').insert({
@@ -116,6 +116,7 @@ export const useSolanaProgram = () => {
         volume_sol: volumeSol || 0,
         transaction_type: type,
         transaction_signature: signature,
+        user_wallet: userWallet,
       });
     } catch (error) {
       console.error('Failed to record price history:', error);
@@ -182,7 +183,7 @@ export const useSolanaProgram = () => {
         const currentPrice = updatedAccount?.sqrtPrice ? Number(updatedAccount.sqrtPrice.toString()) / (2 ** 63) : 0;
         
         console.log('Recording buy price:', currentPrice, 'SOL for token:', baseMint.toString());
-        await recordPriceHistory(baseMint.toString(), currentPrice, 'buy', signature, solAmount);
+        await recordPriceHistory(baseMint.toString(), currentPrice, 'buy', signature, publicKey.toString(), solAmount);
         
         // Update user's token balance in database
         await updateUserTokenBalance(publicKey.toString(), baseMint.toString());
@@ -262,7 +263,7 @@ export const useSolanaProgram = () => {
         const tokenValue = tokenAmount * currentPrice;
         
         console.log('Recording sell price:', currentPrice, 'SOL for token:', baseMint.toString());
-        await recordPriceHistory(baseMint.toString(), currentPrice, 'sell', signature, tokenValue);
+        await recordPriceHistory(baseMint.toString(), currentPrice, 'sell', signature, publicKey.toString(), tokenValue);
         
         // Update user's token balance in database
         await updateUserTokenBalance(publicKey.toString(), baseMint.toString());

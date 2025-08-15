@@ -284,18 +284,18 @@ const TokenDetail = () => {
         setVolume24h(totalVolume);
       }
 
-      // Get active traders (unique transaction signatures in 24h as proxy for unique traders)
+      // Get active traders (unique wallet addresses in 24h)
       const { data: tradersData, error: tradersError } = await supabase
         .from('price_history')
-        .select('transaction_signature')
+        .select('user_wallet')
         .eq('token_mint', id)
         .gte('timestamp', twentyFourHoursAgo)
-        .not('transaction_signature', 'is', null);
+        .not('user_wallet', 'is', null);
 
       if (!tradersError && tradersData) {
-        // Count unique transaction signatures as proxy for active traders
-        const uniqueSignatures = new Set(tradersData.map(item => item.transaction_signature));
-        setActiveTraders(uniqueSignatures.size);
+        // Count unique wallet addresses as active traders
+        const uniqueWallets = new Set(tradersData.map(item => item.user_wallet));
+        setActiveTraders(uniqueWallets.size);
       } else {
         setActiveTraders(0);
       }

@@ -23,6 +23,7 @@ export type Database = {
           token_mint: string
           transaction_signature: string | null
           transaction_type: string | null
+          user_wallet: string | null
           volume_sol: number | null
         }
         Insert: {
@@ -33,6 +34,7 @@ export type Database = {
           token_mint: string
           transaction_signature?: string | null
           transaction_type?: string | null
+          user_wallet?: string | null
           volume_sol?: number | null
         }
         Update: {
@@ -43,6 +45,7 @@ export type Database = {
           token_mint?: string
           transaction_signature?: string | null
           transaction_type?: string | null
+          user_wallet?: string | null
           volume_sol?: number | null
         }
         Relationships: []
