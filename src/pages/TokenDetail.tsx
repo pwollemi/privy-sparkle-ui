@@ -44,6 +44,8 @@ const TokenDetail = () => {
   const [virtualPool, setVirtualPool] = React.useState<any | null>(null);
   const [holdersCount, setHoldersCount] = React.useState(0);
   const [volume24h, setVolume24h] = React.useState(0);
+  const [activeTraders, setActiveTraders] = React.useState(0);
+  const [solPrice, setSolPrice] = React.useState(0);
 
   React.useEffect(() => {
     const fetchToken = async () => {
@@ -263,37 +265,57 @@ const TokenDetail = () => {
     }
   }, [id]);
 
-  // Fetch 24h volume in SOL
-  const fetch24hVolume = React.useCallback(async () => {
+  // Fetch 24h volume and active traders
+  const fetchTradingStats = React.useCallback(async () => {
     if (!id) return;
     
     try {
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       
-      const { data, error } = await supabase
+      // Get 24h volume
+      const { data: volumeData, error: volumeError } = await supabase
         .from('price_history')
         .select('volume_sol')
         .eq('token_mint', id)
         .gte('timestamp', twentyFourHoursAgo);
 
-      if (error) {
-        console.error('Failed to fetch 24h volume:', error);
-        return;
+      if (!volumeError && volumeData) {
+        const totalVolume = volumeData.reduce((sum, entry) => sum + (Number(entry.volume_sol) || 0), 0);
+        setVolume24h(totalVolume);
       }
 
-      const totalVolume = data?.reduce((sum, entry) => sum + (Number(entry.volume_sol) || 0), 0) || 0;
-      setVolume24h(totalVolume);
+      // Get active traders (unique wallets in 24h)
+      const { data: tradersData, error: tradersError } = await supabase
+        .rpc('get_active_traders_24h', { token_mint_param: id });
+
+      if (!tradersError && tradersData) {
+        setActiveTraders(tradersData || 0);
+      }
     } catch (error) {
-      console.error('Error fetching 24h volume:', error);
+      console.error('Error fetching trading stats:', error);
       setVolume24h(0);
+      setActiveTraders(0);
     }
   }, [id]);
+
+  // Fetch SOL price from CoinGecko
+  const fetchSolPrice = React.useCallback(async () => {
+    try {
+      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+      const data = await response.json();
+      setSolPrice(data.solana?.usd || 0);
+    } catch (error) {
+      console.error('Error fetching SOL price:', error);
+      setSolPrice(0);
+    }
+  }, []);
 
   React.useEffect(() => {
     fetchPriceHistory();
     fetchHoldersCount();
-    fetch24hVolume();
-  }, [fetchPriceHistory, fetchHoldersCount, fetch24hVolume]);
+    fetchTradingStats();
+    fetchSolPrice();
+  }, [fetchPriceHistory, fetchHoldersCount, fetchTradingStats, fetchSolPrice]);
 
   React.useEffect(() => {
     fetchTokenBalance();
@@ -340,12 +362,13 @@ const TokenDetail = () => {
     image: (dbToken.image_url as string) ?? '/placeholder.svg',
     price: 0,
     change24h: 0,
-    marketCap: tokenPriceSOL * 100000000, // price * total supply
+    marketCap: tokenPriceSOL * solPrice * 100000000, // token price in SOL * SOL price in USD * total supply
     holders: holdersCount,
     createdAt: new Date(dbToken.created_at).toLocaleDateString(),
     creator: (dbToken.creator as string) ?? '',
     totalSupply: 100000000, // Fixed at 100M
     volume24h: volume24h,
+    activeTraders: activeTraders,
     liquidity: virtualPool ? (Number(virtualPool.quoteReserve?.toString() || '0') / 10 ** 9) : 0, // SOL amount in pool
     priceHistory: priceHistory,
     baseMint: dbToken.base_mint as string,
@@ -426,7 +449,7 @@ const copyAddress = () => {
           fetchTokenBalance();
           fetchPriceHistory();
           fetchHoldersCount();
-          fetch24hVolume();
+          fetchTradingStats();
         }, 2000);
         
         // Try again after 5 seconds in case of RPC delays
@@ -453,7 +476,7 @@ const copyAddress = () => {
           fetchTokenBalance();
           fetchPriceHistory();
           fetchHoldersCount();
-          fetch24hVolume();
+          fetchTradingStats();
         }, 3000);
       }
 
@@ -623,19 +646,25 @@ const copyAddress = () => {
                   </div>
                   <div className="space-y-1">
                     <div className="text-sm text-muted-foreground">Market Cap</div>
-                    <div className="text-lg font-semibold">{token.marketCap.toFixed(3)} SOL</div>
+                    <div className="text-lg font-semibold">
+                      {token.marketCap > 0 ? `$${formatNumber(token.marketCap)}` : '-'}
+                    </div>
                   </div>
                   <div className="space-y-1">
-                    <div className="text-sm text-muted-foreground">24h Volume</div>
+                    <div className="text-sm text-muted-foreground">Trading Volume (24h)</div>
                     <div className="text-lg font-semibold">{token.volume24h.toFixed(3)} SOL</div>
                   </div>
                   <div className="space-y-1">
-                    <div className="text-sm text-muted-foreground">Liquidity</div>
-                    <div className="text-lg font-semibold">{token.liquidity.toFixed(3)} SOL</div>
+                    <div className="text-sm text-muted-foreground">Active Traders (24h)</div>
+                    <div className="text-lg font-semibold">{formatNumber(token.activeTraders)}</div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-sm text-muted-foreground">Holders</div>
                     <div className="text-lg font-semibold">{formatNumber(token.holders)}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-sm text-muted-foreground">Liquidity</div>
+                    <div className="text-lg font-semibold">{token.liquidity.toFixed(3)} SOL</div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-sm text-muted-foreground">Creator</div>
