@@ -81,11 +81,13 @@ const TokenDetail = () => {
   // Fetch user's token balance
   const fetchTokenBalance = React.useCallback(async () => {
     if (!publicKey || !id) {
+      console.log('No publicKey or id for token balance fetch');
       setTokenBalance(0);
       return;
     }
 
     try {
+      console.log('Fetching token balance for:', id);
       // Use the token mint address from the URL (id parameter)
       const tokenMint = new PublicKey(id);
       
@@ -97,15 +99,27 @@ const TokenDetail = () => {
       
       // Get user's associated token account
       const associatedTokenAddress = await getAssociatedTokenAddress(tokenMint, publicKey);
+      console.log('Associated token address:', associatedTokenAddress.toString());
+      
       const tokenAccount = await getAccount(connection, associatedTokenAddress);
+      console.log('Token account data:', {
+        amount: tokenAccount.amount.toString(),
+        mint: tokenAccount.mint.toString(),
+        owner: tokenAccount.owner.toString()
+      });
       
       // Calculate balance with correct decimals
       const balance = Number(tokenAccount.amount) / Math.pow(10, decimals);
       setTokenBalance(balance);
-      console.log(`Token balance: ${balance} tokens`);
+      console.log(`✅ Token balance updated: ${balance} tokens`);
     } catch (error) {
       // Token account doesn't exist or error fetching
-      console.log('Token account not found or error:', error);
+      console.log('❌ Token account error:', error);
+      console.log('Error details:', {
+        name: (error as any)?.name,
+        message: (error as any)?.message,
+        code: (error as any)?.code
+      });
       setTokenBalance(0);
     }
   }, [publicKey, id]);
@@ -289,10 +303,24 @@ const copyAddress = () => {
         });
         setBuyAmount('');
         // Refresh token balance and price history after successful buy
+        console.log('🔄 Starting post-buy refresh in 2 seconds...');
         setTimeout(() => {
+          console.log('🔄 First refresh attempt...');
           fetchTokenBalance();
           fetchPriceHistory();
-        }, 3000);
+        }, 2000);
+        
+        // Try again after 5 seconds in case of RPC delays
+        setTimeout(() => {
+          console.log('🔄 Second refresh attempt...');
+          fetchTokenBalance();
+        }, 5000);
+        
+        // Final attempt after 8 seconds
+        setTimeout(() => {
+          console.log('🔄 Final refresh attempt...');
+          fetchTokenBalance();
+        }, 8000);
       } else {
         // For sell, we need to convert SOL amount to token amount
         const tokenAmountToSell = tokenPriceSOL > 0 ? Math.floor(amountNum / tokenPriceSOL) : 0;

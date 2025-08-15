@@ -157,7 +157,7 @@ export const useSolanaProgram = () => {
         referralTokenAccount: null,
       });
 
-      // Send transaction
+      // Send and confirm transaction
       const {
         context: { slot: minContextSlot },
         value: { blockhash, lastValidBlockHeight },
@@ -166,8 +166,13 @@ export const useSolanaProgram = () => {
       transaction.feePayer = publicKey;
       transaction.recentBlockhash = blockhash;
 
+      console.log('💰 Sending buy transaction...');
       const signature = await sendTransaction(transaction, connection, { minContextSlot });
+      console.log('📝 Transaction signature:', signature);
+      
+      console.log('⏳ Confirming transaction...');
       await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature });
+      console.log('✅ Transaction confirmed!');
 
       // Calculate current price from pool state and record it
       try {
