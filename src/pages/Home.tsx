@@ -14,6 +14,8 @@ const Home = () => {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [tokens, setTokens] = React.useState<any[]>([]);
   const [priceMap, setPriceMap] = React.useState<Record<string, number>>({});
+  const [totalVolume, setTotalVolume] = React.useState(0);
+  const [activeTraders, setActiveTraders] = React.useState(0);
 
   React.useEffect(() => {
     const fetchTokens = async () => {
@@ -40,6 +42,41 @@ const Home = () => {
     return () => {
       supabase.removeChannel(channel);
     };
+  }, []);
+
+  // Fetch trading statistics from database
+  React.useEffect(() => {
+    const fetchTradingStats = async () => {
+      try {
+        // Get total trading volume (all time)
+        const { data: volumeData, error: volumeError } = await supabase
+          .from('price_history')
+          .select('volume_sol')
+          .not('volume_sol', 'is', null);
+
+        if (!volumeError && volumeData) {
+          const totalVol = volumeData.reduce((sum, entry) => sum + (Number(entry.volume_sol) || 0), 0);
+          setTotalVolume(totalVol);
+        }
+
+        // Get active traders (unique wallets from last 30 days)
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const { data: tradersData, error: tradersError } = await supabase
+          .from('price_history')
+          .select('user_wallet')
+          .gte('timestamp', thirtyDaysAgo)
+          .not('user_wallet', 'is', null);
+
+        if (!tradersError && tradersData) {
+          const uniqueWallets = new Set(tradersData.map(item => item.user_wallet));
+          setActiveTraders(uniqueWallets.size);
+        }
+      } catch (error) {
+        console.error('Error fetching trading stats:', error);
+      }
+    };
+
+    fetchTradingStats();
   }, []);
 
   React.useEffect(() => {
@@ -146,12 +183,16 @@ const Home = () => {
               <div className="text-muted-foreground">Tokens Launched</div>
             </div>
             <div className="bg-card/50 p-6 rounded-lg border border-border backdrop-blur-sm">
-              <div className="text-3xl font-bold text-secondary mb-2">$50M+</div>
+              <div className="text-3xl font-bold text-secondary mb-2">
+                {totalVolume > 0 ? `${totalVolume.toFixed(2)} SOL` : '0.00 SOL'}
+              </div>
               <div className="text-muted-foreground">Trading Volume</div>
             </div>
             <div className="bg-card/50 p-6 rounded-lg border border-border backdrop-blur-sm">
-              <div className="text-3xl font-bold text-accent mb-2">25,000+</div>
-              <div className="text-muted-foreground">Active Traders</div>
+              <div className="text-3xl font-bold text-accent mb-2">
+                {activeTraders.toLocaleString()}
+              </div>
+              <div className="text-muted-foreground">Active Traders (30d)</div>
             </div>
           </div>
         </div>
