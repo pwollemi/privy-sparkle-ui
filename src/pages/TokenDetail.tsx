@@ -103,9 +103,32 @@ const TokenDetail = () => {
       console.log('🔍 Attempting to fetch token account...');
       
       try {
+        // First get raw account info to check if account exists and owner
+        const accountInfo = await connection.getAccountInfo(associatedTokenAddress, 'confirmed');
+        
+        if (!accountInfo) {
+          console.log('💡 Associated token account does not exist - setting balance to 0');
+          setTokenBalance(0);
+          return;
+        }
+        
+        console.log('✅ Account info found:', {
+          owner: accountInfo.owner.toString(),
+          lamports: accountInfo.lamports,
+          dataLength: accountInfo.data.length
+        });
+        
+        // Check if account is owned by the Token program
+        const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+        if (!accountInfo.owner.equals(TOKEN_PROGRAM_ID)) {
+          console.log('❌ Account is not owned by Token program. Owner:', accountInfo.owner.toString());
+          setTokenBalance(0);
+          return;
+        }
+        
+        // Now safely use getAccount since we know it's a token account
         const tokenAccount = await getAccount(connection, associatedTokenAddress);
-        console.log('✅ Token account found!');
-        console.log('Token account data:', {
+        console.log('✅ Token account parsed successfully:', {
           amount: tokenAccount.amount.toString(),
           mint: tokenAccount.mint.toString(),
           owner: tokenAccount.owner.toString(),
@@ -119,24 +142,8 @@ const TokenDetail = () => {
         
       } catch (tokenAccountError) {
         console.log('❌ Token account fetch failed:', tokenAccountError);
-        
-        // Check if it's specifically a "Account not found" error
-        if (tokenAccountError && (tokenAccountError as any).message?.includes('could not find account')) {
-          console.log('🔍 Account not found - checking if account was created...');
-          
-          // Try alternative approach - check account info directly
-          try {
-            const accountInfo = await connection.getAccountInfo(associatedTokenAddress, 'confirmed');
-            console.log('Account info result:', accountInfo);
-            
-            if (!accountInfo) {
-              console.log('💡 Associated token account does not exist yet - this is normal for first-time token holders');
-            }
-          } catch (infoError) {
-            console.log('Account info check failed:', infoError);
-          }
-        }
-        
+        console.log('Error name:', (tokenAccountError as any)?.name);
+        console.log('Error message:', (tokenAccountError as any)?.message);
         setTokenBalance(0);
       }
     } catch (error) {
