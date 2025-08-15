@@ -1,8 +1,9 @@
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, Keypair } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction } from '@solana/spl-token';
+import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, getMint } from '@solana/spl-token';
 import programIdl from './program-idl.json';
 import { DynamicBondingCurveClient } from '@meteora-ag/dynamic-bonding-curve-sdk';
+import BN from 'bn.js';
 
 // Program configuration
 export const PROGRAM_ID = new PublicKey('HANVKJPfmADejWxYUVdLYn59URiZCLZvHZ3PbXkZh6Wp');
@@ -126,17 +127,17 @@ export const useSolanaProgram = () => {
         throw new Error('Base mint not found in pool');
       }
 
-      // Convert SOL amount to lamports
-      const lamports = Math.floor(solAmount * LAMPORTS_PER_SOL);
+      // Convert SOL amount to lamports (BN)
+      const lamportsBn = new BN(Math.floor(solAmount * LAMPORTS_PER_SOL));
 
       // Build swap transaction (buy) - swapping SOL for tokens
       const transaction = await client.pool.swap({
         pool: poolPubkey,
         owner: publicKey,
         payer: publicKey,
-        swapBaseForQuote: true, // true = buying tokens with SOL (base)
-        amountIn: lamports,
-        minimumAmountOut: 0, // Set to 0 for now, should calculate slippage tolerance
+        swapBaseForQuote: false, // false when buying with SOL per SDK semantics
+        amountIn: lamportsBn,
+        minimumAmountOut: new BN(0),
         referralTokenAccount: null,
       });
 
@@ -181,14 +182,20 @@ export const useSolanaProgram = () => {
         throw new Error('Base mint not found in pool');
       }
 
+      // Determine token decimals and convert to smallest units (BN)
+      const mintInfo = await getMint(connection, new PublicKey(baseMint.toString()));
+      const decimals = mintInfo.decimals ?? 6;
+      const factor = Math.pow(10, decimals);
+      const amountBn = new BN(Math.floor(tokenAmount * factor));
+
       // Build swap transaction (sell) - swapping tokens for SOL
       const transaction = await client.pool.swap({
         pool: poolPubkey,
         owner: publicKey,
         payer: publicKey,
-        swapBaseForQuote: false, // false = selling tokens for SOL (quote)
-        amountIn: tokenAmount,
-        minimumAmountOut: 0, // Set to 0 for now, should calculate slippage tolerance
+        swapBaseForQuote: true, // true when selling tokens for SOL per SDK semantics
+        amountIn: amountBn,
+        minimumAmountOut: new BN(0),
         referralTokenAccount: null,
       });
 
