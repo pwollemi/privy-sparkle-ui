@@ -23,15 +23,20 @@ import { DynamicBondingCurveClient } from '@meteora-ag/dynamic-bonding-curve-sdk
 import { connection, useSolanaProgram } from '@/lib/solana-program';
 import { PublicKey } from '@solana/web3.js';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { useWalletBalance } from '@/hooks/useWalletBalance';
+import { getAssociatedTokenAddress, getAccount } from '@solana/spl-token';
 
 const TokenDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { connected } = useWallet();
+  const { connected, publicKey } = useWallet();
+  const { sol: solBalance } = useWalletBalance();
   const { buyToken, sellToken, isConnected } = useSolanaProgram();
   const [buyAmount, setBuyAmount] = React.useState('');
   const [sellAmount, setSellAmount] = React.useState('');
+  const [activeTab, setActiveTab] = React.useState('buy');
+  const [tokenBalance, setTokenBalance] = React.useState(0);
   const [dbToken, setDbToken] = React.useState<any | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [tradingLoading, setTradingLoading] = React.useState(false);
@@ -71,6 +76,29 @@ const TokenDetail = () => {
     };
     fetchVirtualPool();
   }, [dbToken?.pool_address]);
+
+  // Fetch user's token balance
+  React.useEffect(() => {
+    const fetchTokenBalance = async () => {
+      if (!publicKey || !dbToken?.base_mint) {
+        setTokenBalance(0);
+        return;
+      }
+
+      try {
+        const tokenMint = new PublicKey(dbToken.base_mint);
+        const associatedTokenAddress = await getAssociatedTokenAddress(tokenMint, publicKey);
+        const tokenAccount = await getAccount(connection, associatedTokenAddress);
+        const balance = Number(tokenAccount.amount) / Math.pow(10, 6); // Assuming 6 decimals
+        setTokenBalance(balance);
+      } catch (error) {
+        // Token account doesn't exist or error fetching
+        setTokenBalance(0);
+      }
+    };
+
+    fetchTokenBalance();
+  }, [publicKey, dbToken?.base_mint]);
 
   const tokenPriceSOL = React.useMemo(() => {
     const sqrt = (virtualPool as any)?.sqrtPrice;
@@ -401,7 +429,7 @@ const copyAddress = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="buy" className="w-full">
+                <Tabs defaultValue="buy" className="w-full" onValueChange={setActiveTab}>
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="buy">Buy</TabsTrigger>
                     <TabsTrigger value="sell">Sell</TabsTrigger>
@@ -463,22 +491,51 @@ const copyAddress = () => {
             {/* Quick Actions */}
             <Card className="bg-card/50 border-border">
               <CardHeader>
-                <CardTitle className="text-lg">Quick Buy</CardTitle>
+                <CardTitle className="text-lg">
+                  {activeTab === 'buy' ? 'Quick Buy' : 'Quick Sell'}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {[0.1, 0.5, 1, 5].map((amount) => (
-                  <Button
-                    key={amount}
-                    variant="outline"
-                    className="w-full justify-between"
-                    onClick={() => setBuyAmount(amount.toString())}
-                  >
-                    <span>{amount} SOL</span>
-                    <span className="text-muted-foreground">
-                      ≈{tokenPriceSOL > 0 ? formatNumber(amount / tokenPriceSOL) : '0'} {token.symbol}
-                    </span>
-                  </Button>
-                ))}
+                {activeTab === 'buy' ? (
+                  // Quick buy with SOL balance percentages
+                  [10, 30, 50, 70, 100].map((percentage) => {
+                    const amount = (solBalance * percentage) / 100;
+                    return (
+                      <Button
+                        key={percentage}
+                        variant="outline"
+                        className="w-full justify-between"
+                        onClick={() => setBuyAmount(amount.toFixed(3))}
+                        disabled={!isConnected || solBalance === 0}
+                      >
+                        <span>{percentage}% ({amount.toFixed(3)} SOL)</span>
+                        <span className="text-muted-foreground">
+                          ≈{tokenPriceSOL > 0 ? formatNumber(amount / tokenPriceSOL) : '0'} {token.symbol}
+                        </span>
+                      </Button>
+                    );
+                  })
+                ) : (
+                  // Quick sell with token balance percentages
+                  [10, 30, 50, 70, 100].map((percentage) => {
+                    const tokenAmount = (tokenBalance * percentage) / 100;
+                    const solValue = tokenAmount * tokenPriceSOL;
+                    return (
+                      <Button
+                        key={percentage}
+                        variant="outline"
+                        className="w-full justify-between"
+                        onClick={() => setSellAmount(solValue.toFixed(6))}
+                        disabled={!isConnected || tokenBalance === 0}
+                      >
+                        <span>{percentage}% ({formatNumber(tokenAmount)} {token.symbol})</span>
+                        <span className="text-muted-foreground">
+                          ≈{solValue.toFixed(6)} SOL
+                        </span>
+                      </Button>
+                    );
+                  })
+                )}
               </CardContent>
             </Card>
 
