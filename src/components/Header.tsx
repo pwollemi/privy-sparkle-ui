@@ -136,7 +136,16 @@ const Header = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <WalletMultiButton className="wallet-button min-w-[140px]" />
+              <WalletMultiButton 
+                className="wallet-button min-w-[140px]"
+                style={{
+                  border: '2px solid hsl(280 100% 70%)',
+                  background: 'transparent',
+                  color: 'hsl(280 100% 70%)',
+                  boxShadow: '0 0 20px hsl(280 100% 70% / 0.5)',
+                  transition: 'all 0.3s'
+                }}
+              />
             )}
           </div>
         </div>
