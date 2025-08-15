@@ -306,6 +306,10 @@ const CreateToken = () => {
                           color: 'hsl(280 100% 70%)',
                           boxShadow: '0 0 20px hsl(280 100% 70% / 0.5)',
                           borderRadius: '0.5rem',
+                          height: '2.25rem',
+                          padding: '0 0.75rem',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
                           transition: 'all 0.3s'
                         }}
                       />
