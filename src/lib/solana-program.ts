@@ -215,8 +215,14 @@ export const useSolanaProgram = () => {
         throw new Error('Base mint not found in pool');
       }
 
+      // Determine which token program this mint uses (Token or Token-2022)
+      const baseMintPubkey = new PublicKey(baseMint.toString());
+      const mintAccInfo = await connection.getAccountInfo(baseMintPubkey, 'confirmed');
+      const isToken2022 = mintAccInfo?.owner?.equals(TOKEN_2022_PROGRAM_ID) ?? false;
+      const tokenProgramId = isToken2022 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
+      
       // Determine token decimals and convert to smallest units (BN)
-      const mintInfo = await getMint(connection, new PublicKey(baseMint.toString()));
+      const mintInfo = await getMint(connection, baseMintPubkey, 'confirmed', tokenProgramId);
       const decimals = mintInfo.decimals ?? 6;
       const factor = Math.pow(10, decimals);
       const amountBn = new BN(Math.floor(tokenAmount * factor));
