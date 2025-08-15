@@ -24,7 +24,7 @@ import { connection, useSolanaProgram } from '@/lib/solana-program';
 import { PublicKey } from '@solana/web3.js';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletBalance } from '@/hooks/useWalletBalance';
-import { getAssociatedTokenAddress, getAccount } from '@solana/spl-token';
+import { getAssociatedTokenAddress, getAccount, getMint } from '@solana/spl-token';
 
 const TokenDetail = () => {
   const { id } = useParams();
@@ -78,27 +78,37 @@ const TokenDetail = () => {
   }, [dbToken?.pool_address]);
 
   // Fetch user's token balance
+  const fetchTokenBalance = React.useCallback(async () => {
+    if (!publicKey || !dbToken?.base_mint) {
+      setTokenBalance(0);
+      return;
+    }
+
+    try {
+      const tokenMint = new PublicKey(dbToken.base_mint);
+      
+      // Get mint info for correct decimals
+      const mintInfo = await getMint(connection, tokenMint);
+      const decimals = mintInfo.decimals;
+      
+      // Get user's associated token account
+      const associatedTokenAddress = await getAssociatedTokenAddress(tokenMint, publicKey);
+      const tokenAccount = await getAccount(connection, associatedTokenAddress);
+      
+      // Calculate balance with correct decimals
+      const balance = Number(tokenAccount.amount) / Math.pow(10, decimals);
+      setTokenBalance(balance);
+      console.log(`Token balance: ${balance} ${dbToken.symbol}`);
+    } catch (error) {
+      // Token account doesn't exist or error fetching
+      console.log('Token account not found or error:', error);
+      setTokenBalance(0);
+    }
+  }, [publicKey, dbToken?.base_mint, dbToken?.symbol]);
+
   React.useEffect(() => {
-    const fetchTokenBalance = async () => {
-      if (!publicKey || !dbToken?.base_mint) {
-        setTokenBalance(0);
-        return;
-      }
-
-      try {
-        const tokenMint = new PublicKey(dbToken.base_mint);
-        const associatedTokenAddress = await getAssociatedTokenAddress(tokenMint, publicKey);
-        const tokenAccount = await getAccount(connection, associatedTokenAddress);
-        const balance = Number(tokenAccount.amount) / Math.pow(10, 6); // Assuming 6 decimals
-        setTokenBalance(balance);
-      } catch (error) {
-        // Token account doesn't exist or error fetching
-        setTokenBalance(0);
-      }
-    };
-
     fetchTokenBalance();
-  }, [publicKey, dbToken?.base_mint]);
+  }, [fetchTokenBalance]);
 
   const tokenPriceSOL = React.useMemo(() => {
     const sqrt = (virtualPool as any)?.sqrtPrice;
@@ -221,6 +231,8 @@ const copyAddress = () => {
           description: `Successfully bought ${token.symbol} with ${amount} SOL`,
         });
         setBuyAmount('');
+        // Refresh token balance after successful buy
+        setTimeout(() => fetchTokenBalance(), 2000);
       } else {
         // For sell, we need to convert SOL amount to token amount
         const tokenAmountToSell = tokenPriceSOL > 0 ? Math.floor(amountNum / tokenPriceSOL) : 0;
@@ -230,6 +242,8 @@ const copyAddress = () => {
           description: `Successfully sold ${token.symbol} for ${amount} SOL`,
         });
         setSellAmount('');
+        // Refresh token balance after successful sell
+        setTimeout(() => fetchTokenBalance(), 2000);
       }
 
       console.log('Transaction signature:', signature);
@@ -487,6 +501,26 @@ const copyAddress = () => {
                 </Tabs>
               </CardContent>
             </Card>
+
+            {/* Token Balance Display */}
+            {isConnected && (
+              <Card className="bg-card/50 border-border">
+                <CardHeader>
+                  <CardTitle className="text-lg">Your Balance</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center p-3 bg-card/50 rounded-lg">
+                    <div className="text-2xl font-bold text-foreground">
+                      {formatNumber(tokenBalance)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">{token.symbol}</div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      ≈ {(tokenBalance * tokenPriceSOL).toFixed(6)} SOL
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Quick Actions */}
             <Card className="bg-card/50 border-border">
