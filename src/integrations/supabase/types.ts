@@ -139,7 +139,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_active_traders_24h: {
+        Args: { token_mint_param: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
