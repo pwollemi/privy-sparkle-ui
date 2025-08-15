@@ -287,14 +287,15 @@ const TokenDetail = () => {
       // Get active traders (unique transaction signatures in 24h as proxy for unique traders)
       const { data: tradersData, error: tradersError } = await supabase
         .from('price_history')
-        .select('transaction_signature', { count: 'exact' })
+        .select('transaction_signature')
         .eq('token_mint', id)
         .gte('timestamp', twentyFourHoursAgo)
         .not('transaction_signature', 'is', null);
 
       if (!tradersError && tradersData) {
-        // Estimate unique traders (each transaction signature represents a trader)
-        setActiveTraders(tradersData.length || 0);
+        // Count unique transaction signatures as proxy for active traders
+        const uniqueSignatures = new Set(tradersData.map(item => item.transaction_signature));
+        setActiveTraders(uniqueSignatures.size);
       } else {
         setActiveTraders(0);
       }
