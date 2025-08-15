@@ -16,6 +16,7 @@ const Home = () => {
   const [priceMap, setPriceMap] = React.useState<Record<string, number>>({});
   const [totalVolume, setTotalVolume] = React.useState(0);
   const [activeTraders, setActiveTraders] = React.useState(0);
+  const [solPrice, setSolPrice] = React.useState(0);
 
   React.useEffect(() => {
     const fetchTokens = async () => {
@@ -46,8 +47,14 @@ const Home = () => {
 
   // Fetch trading statistics from database
   React.useEffect(() => {
-    const fetchTradingStats = async () => {
+  const fetchTradingStats = async () => {
       try {
+        // Fetch SOL price first
+        const solPriceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+        const solPriceData = await solPriceResponse.json();
+        const currentSolPrice = solPriceData.solana?.usd || 0;
+        setSolPrice(currentSolPrice);
+
         // Get total trading volume (all time)
         const { data: volumeData, error: volumeError } = await supabase
           .from('price_history')
@@ -184,7 +191,10 @@ const Home = () => {
             </div>
             <div className="bg-card/50 p-6 rounded-lg border border-border backdrop-blur-sm">
               <div className="text-3xl font-bold text-secondary mb-2">
-                {totalVolume > 0 ? `${totalVolume.toFixed(2)} SOL` : '0.00 SOL'}
+                {totalVolume > 0 && solPrice > 0 
+                  ? `$${((totalVolume * solPrice) / 1000000).toFixed(1)}M` 
+                  : '$0.0M'
+                }
               </div>
               <div className="text-muted-foreground">Trading Volume</div>
             </div>
