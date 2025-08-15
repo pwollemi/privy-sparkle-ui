@@ -143,6 +143,7 @@ const Header = () => {
                   background: 'transparent',
                   color: 'hsl(280 100% 70%)',
                   boxShadow: '0 0 20px hsl(280 100% 70% / 0.5)',
+                  borderRadius: '0.5rem',
                   transition: 'all 0.3s'
                 }}
               />
