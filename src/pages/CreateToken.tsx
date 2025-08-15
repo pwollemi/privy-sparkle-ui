@@ -20,7 +20,6 @@ const CreateToken = () => {
     symbol: '',
     description: '',
     image: null as File | null,
-    initialSupply: '',
     website: '',
     twitter: '',
     telegram: ''
@@ -63,7 +62,7 @@ const CreateToken = () => {
         name: formData.name,
         symbol: formData.symbol,
         description: formData.description,
-        initialSupply: parseInt(formData.initialSupply) || 1000000000,
+        initialSupply: 100000000, // Always 100,000,000 tokens
         image: formData.image || undefined,
         website: formData.website,
         twitter: formData.twitter,
@@ -97,7 +96,7 @@ const CreateToken = () => {
         symbol: formData.symbol,
         description: formData.description,
         image_url: imageUrl,
-        initial_supply: parseInt(formData.initialSupply) || 1000000000,
+        initial_supply: 100000000, // Always 100,000,000 tokens
         website: formData.website || null,
         twitter: formData.twitter || null,
         telegram: formData.telegram || null,
@@ -130,7 +129,6 @@ const CreateToken = () => {
         symbol: '',
         description: '',
         image: null,
-        initialSupply: '',
         website: '',
         twitter: '',
         telegram: ''
@@ -203,16 +201,10 @@ const CreateToken = () => {
                 />
               </div>
 
-              <div>
-                <Label htmlFor="supply">Initial Supply</Label>
-                <Input
-                  id="supply"
-                  placeholder="1000000000"
-                  type="number"
-                  value={formData.initialSupply}
-                  onChange={(e) => handleInputChange('initialSupply', e.target.value)}
-                  className="bg-input/50"
-                />
+              <div className="text-center p-4 bg-card/30 rounded-lg border border-border/50">
+                <p className="text-sm font-medium text-muted-foreground mb-1">Total Supply</p>
+                <p className="text-lg font-bold">100,000,000</p>
+                <p className="text-xs text-muted-foreground">Fixed for all tokens</p>
               </div>
 
               <div>
@@ -281,6 +273,7 @@ const CreateToken = () => {
                   </div>
                   <h3 className="text-xl font-bold">{formData.name || 'Token Name'}</h3>
                   <p className="text-muted-foreground">${formData.symbol || 'SYMBOL'}</p>
+                  <p className="text-sm text-accent font-medium">Total Supply: 100,000,000</p>
                   <p className="text-sm text-muted-foreground">
                     {formData.description || 'Token description will appear here...'}
                   </p>
