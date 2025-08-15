@@ -602,6 +602,7 @@ const copyAddress = () => {
                   // Quick buy with SOL balance percentages
                   [10, 30, 50, 70, 100].map((percentage) => {
                     const amount = (solBalance * percentage) / 100;
+                    const estimatedTokens = tokenPriceSOL > 0 ? amount / tokenPriceSOL : 0;
                     return (
                       <Button
                         key={percentage}
@@ -612,7 +613,7 @@ const copyAddress = () => {
                       >
                         <span>{percentage}% ({amount.toFixed(3)} SOL)</span>
                         <span className="text-muted-foreground">
-                          ≈{tokenPriceSOL > 0 ? formatNumber(amount / tokenPriceSOL) : '0'} {token.symbol}
+                          ≈{estimatedTokens > 0 ? formatNumber(estimatedTokens) : '0'} {token.symbol}
                         </span>
                       </Button>
                     );
@@ -621,7 +622,7 @@ const copyAddress = () => {
                   // Quick sell with token balance percentages
                   [10, 30, 50, 70, 100].map((percentage) => {
                     const tokenAmount = (tokenBalance * percentage) / 100;
-                    const solValue = tokenAmount * tokenPriceSOL;
+                    const solValue = tokenPriceSOL > 0 ? tokenAmount * tokenPriceSOL : 0;
                     return (
                       <Button
                         key={percentage}
@@ -632,7 +633,7 @@ const copyAddress = () => {
                       >
                         <span>{percentage}% ({formatNumber(tokenAmount)} {token.symbol})</span>
                         <span className="text-muted-foreground">
-                          ≈{solValue.toFixed(6)} SOL
+                          ≈{solValue > 0 ? solValue.toFixed(6) : '0.000000'} SOL
                         </span>
                       </Button>
                     );
