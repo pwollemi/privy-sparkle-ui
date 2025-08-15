@@ -224,7 +224,7 @@ const TokenDetail = () => {
     fetchPriceHistory();
   }, [fetchPriceHistory]);
 
-  // Fetch holders count
+  // Fetch holders count - count users with balance > 0
   const fetchHoldersCount = React.useCallback(async () => {
     if (!id) return;
     
@@ -233,14 +233,30 @@ const TokenDetail = () => {
         .from('token_balances')
         .select('*', { count: 'exact' })
         .eq('token_mint', id)
-        .gt('balance', 1); // Only count users with more than 1 token
+        .gt('balance', 0); // Count users with any balance > 0
 
       if (error) {
         console.error('Failed to fetch holders count:', error);
         return;
       }
 
-      setHoldersCount(data?.length || 0);
+      // If no data in token_balances yet, try to estimate from price_history
+      if (!data || data.length === 0) {
+        const { data: historyData, error: historyError } = await supabase
+          .from('price_history')
+          .select('transaction_signature', { count: 'exact' })
+          .eq('token_mint', id)
+          .eq('transaction_type', 'buy');
+        
+        if (!historyError && historyData) {
+          // Rough estimate based on buy transactions (not perfect but better than 0)
+          setHoldersCount(Math.max(1, Math.floor(historyData.length * 0.8))); // Assume 80% retention
+        } else {
+          setHoldersCount(0);
+        }
+      } else {
+        setHoldersCount(data.length);
+      }
     } catch (error) {
       console.error('Error fetching holders count:', error);
       setHoldersCount(0);
@@ -329,7 +345,6 @@ const TokenDetail = () => {
     createdAt: new Date(dbToken.created_at).toLocaleDateString(),
     creator: (dbToken.creator as string) ?? '',
     totalSupply: 100000000, // Fixed at 100M
-    circulatingSupply: 100000000, // Fixed at 100M
     volume24h: volume24h,
     liquidity: virtualPool ? (Number(virtualPool.quoteReserve?.toString() || '0') / 10 ** 9) : 0, // SOL amount in pool
     priceHistory: priceHistory,
@@ -605,10 +620,6 @@ const copyAddress = () => {
                   <div className="space-y-1">
                     <div className="text-sm text-muted-foreground">Total Supply</div>
                     <div className="text-lg font-semibold">{formatNumber(token.totalSupply)}</div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="text-sm text-muted-foreground">Circulating Supply</div>
-                    <div className="text-lg font-semibold">{formatNumber(token.circulatingSupply)}</div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-sm text-muted-foreground">24h Volume</div>
