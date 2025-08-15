@@ -367,12 +367,11 @@ const copyAddress = () => {
           fetchTokenBalance();
         }, 8000);
       } else {
-        // For sell, we need to convert SOL amount to token amount
-        const tokenAmountToSell = tokenPriceSOL > 0 ? Math.floor(amountNum / tokenPriceSOL) : 0;
-        signature = await sellToken(token.poolAddress, tokenAmountToSell);
+        // For sell, use the input amount directly as token amount
+        signature = await sellToken(token.poolAddress, amountNum);
         toast({
           title: "Sell Order Success! 💰",
-          description: `Successfully sold ${token.symbol} for ${amount} SOL`,
+          description: `Successfully sold ${amount} ${token.symbol}`,
         });
         setSellAmount('');
         // Refresh token balance and price history after successful sell
@@ -617,17 +616,17 @@ const copyAddress = () => {
                   
                   <TabsContent value="sell" className="space-y-4">
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Amount (SOL)</label>
+                      <label className="text-sm font-medium mb-2 block">Amount ({token.symbol})</label>
                       <Input
                         type="number"
-                        placeholder="0.1"
+                        placeholder="1000"
                         value={sellAmount}
                         onChange={(e) => setSellAmount(e.target.value)}
                         className="bg-input/50"
                       />
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      ≈ {sellAmount && tokenPriceSOL > 0 ? (parseFloat(sellAmount) / tokenPriceSOL).toFixed(0) : '0'} {token.symbol}
+                      ≈ {sellAmount && tokenPriceSOL > 0 ? (parseFloat(sellAmount) * tokenPriceSOL).toFixed(6) : '0'} SOL
                     </div>
                     <Button 
                       variant="danger" 
@@ -701,7 +700,7 @@ const copyAddress = () => {
                         key={percentage}
                         variant="outline"
                         className="w-full justify-between"
-                        onClick={() => setSellAmount(solValue.toFixed(6))}
+                        onClick={() => setSellAmount(tokenAmount.toFixed(0))}
                         disabled={!isConnected || tokenBalance === 0}
                       >
                         <span>{percentage}% ({formatNumber(tokenAmount)} {token.symbol})</span>
