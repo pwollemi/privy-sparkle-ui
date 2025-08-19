@@ -50,6 +50,30 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          wallet_address: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          wallet_address: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       token_balances: {
         Row: {
           balance: number
@@ -142,6 +166,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_user_wallet: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_active_traders_24h: {
         Args: { token_mint_param: string }
         Returns: number
