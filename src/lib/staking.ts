@@ -1,6 +1,6 @@
 import { Connection, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
 import { Program, AnchorProvider, web3, BN } from '@coral-xyz/anchor';
-import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
+import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, createAssociatedTokenAccountInstruction, getAssociatedTokenAddress } from '@solana/spl-token';
 
 // Import the staking program IDL
 import stakingIdl from './staking-program-idl.json';
@@ -148,6 +148,36 @@ export class StakingProgram {
     
     try {
       const tokenProgram = await this.resolveTokenProgramId(stakeMint);
+      
+      // Check if user's token account exists, create if not
+      const userTokenAccountInfo = await this.connection.getAccountInfo(userTokenAccount);
+      if (!userTokenAccountInfo) {
+        console.log('🔧 Creating associated token account...');
+        const createATAInstruction = createAssociatedTokenAccountInstruction(
+          userWallet, // payer
+          userTokenAccount, // ata
+          userWallet, // owner
+          stakeMint, // mint
+          tokenProgram
+        );
+        transaction.add(createATAInstruction);
+      }
+
+      // Check if position account exists, if not it will be created by the program
+      const positionAccountInfo = await this.connection.getAccountInfo(positionPDA);
+      console.log(`🔍 Position account exists: ${!!positionAccountInfo}`);
+
+      console.log('🔧 Creating stake instruction with accounts:', {
+        pool: poolPDA.toString(),
+        stakeMint: stakeMint.toString(), 
+        position: positionPDA.toString(),
+        user: userWallet.toString(),
+        userTokenAccount: userTokenAccount.toString(),
+        stakeVault: stakeVaultPDA.toString(),
+        tokenProgram: tokenProgram.toString(),
+        systemProgram: SystemProgram.programId.toString(),
+      });
+
       const instruction = await this.program.methods
         .stake(new BN(amount))
         .accounts({
@@ -165,7 +195,7 @@ export class StakingProgram {
       transaction.add(instruction);
     } catch (error) {
       console.error('Error creating stake instruction:', error);
-      throw new Error('Failed to create stake transaction');
+      throw new Error(`Failed to create stake transaction: ${error}`);
     }
 
     return transaction;

@@ -81,6 +81,9 @@ const Staking = () => {
         tokenProgram
       );
 
+      console.log('🚀 Creating staking transaction...');
+      console.log(`📊 Staking ${raw} tokens (${amountBase} base units) of ${selectedToken}`);
+
       const tx = await staking.stakeTokens(publicKey, mintPk, tokenAccount, amountBase);
       const {
         context: { slot: minContextSlot },
