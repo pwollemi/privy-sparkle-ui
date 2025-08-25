@@ -48,6 +48,12 @@ const Header = () => {
             >
               Portfolio
             </button>
+            <button 
+              onClick={() => navigate('/staking')}
+              className="text-foreground hover:text-primary transition-colors"
+            >
+              Staking
+            </button>
           </nav>
 
           <div className="flex items-center gap-3">

@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import Home from "./pages/Home";
 import CreateToken from "./pages/CreateToken";
 import Portfolio from "./pages/Portfolio";
+import Staking from "./pages/Staking";
 import TokenDetail from "./pages/TokenDetail";
 import NotFound from "./pages/NotFound";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
@@ -34,6 +35,7 @@ const App = () => (
                   <Route path="/" element={<Home />} />
                   <Route path="/create" element={<CreateToken />} />
                   <Route path="/portfolio" element={<Portfolio />} />
+                  <Route path="/staking" element={<Staking />} />
                   <Route path="/token/:id" element={<TokenDetail />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
