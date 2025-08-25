@@ -13,9 +13,14 @@ import { AlertCircle, Coins, Lock, TrendingUp, Zap, Timer, Trophy } from 'lucide
 import { useTokenHoldings } from '@/hooks/useTokenHoldings';
 import { useStaking } from '@/hooks/useStaking';
 import { toast } from '@/hooks/use-toast';
+import { StakingProgram } from '@/lib/staking';
+import { connection } from '@/lib/solana-program';
+import { PublicKey } from '@solana/web3.js';
+import { getMint } from '@solana/spl-token';
 
 const Staking = () => {
-  const { connected, publicKey } = useWallet();
+  const walletCtx = useWallet();
+  const { connected, publicKey, sendTransaction } = walletCtx;
   const navigate = useNavigate();
   const { holdings, isLoading: holdingsLoading } = useTokenHoldings();
   const { stakedPositions, totalStaked, totalRewards, isLoading: stakingLoading } = useStaking();
@@ -51,53 +56,85 @@ const Staking = () => {
     }
 
     try {
-      // TODO: Implement actual staking logic with Solana program
-      toast({
-        title: "Staking Initiated",
-        description: `Staking ${stakeAmount} tokens. Transaction pending...`,
-      });
-      
-      // Reset form
+      if (!publicKey) throw new Error('Wallet not connected');
+      const staking = new StakingProgram(connection, walletCtx);
+      const mintPk = new PublicKey(selectedToken);
+      const mintInfo = await getMint(connection, mintPk);
+      const decimals = Number(mintInfo.decimals ?? 0);
+      const raw = Number(stakeAmount);
+      if (!raw || raw <= 0) throw new Error('Enter a valid amount');
+      const amountBase = Math.floor(raw * Math.pow(10, decimals));
+
+      const tx = await staking.stakeTokens(publicKey, mintPk, amountBase);
+      const {
+        context: { slot: minContextSlot },
+        value: { blockhash, lastValidBlockHeight },
+      } = await connection.getLatestBlockhashAndContext();
+      tx.feePayer = publicKey;
+      tx.recentBlockhash = blockhash;
+
+      const sig = await sendTransaction(tx, connection, { minContextSlot });
+      await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature: sig });
+
+      toast({ title: 'Staking Initiated', description: `Tx: ${sig}` });
       setStakeAmount('');
       setSelectedToken('');
-    } catch (error) {
-      toast({
-        title: "Staking Failed",
-        description: "Failed to stake tokens. Please try again.",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      console.error(error);
+      toast({ title: 'Staking Failed', description: error?.message || 'Failed to stake tokens', variant: 'destructive' });
     }
   };
 
   const handleUnstake = async (tokenMint: string, amount: string) => {
     try {
-      // TODO: Implement actual unstaking logic with Solana program
-      toast({
-        title: "Unstaking Initiated",
-        description: `Unstaking ${amount} tokens. Transaction pending...`,
-      });
-    } catch (error) {
-      toast({
-        title: "Unstaking Failed",
-        description: "Failed to unstake tokens. Please try again.",
-        variant: "destructive",
-      });
+      if (!publicKey) throw new Error('Wallet not connected');
+      const staking = new StakingProgram(connection, walletCtx);
+      const mintPk = new PublicKey(tokenMint);
+      const mintInfo = await getMint(connection, mintPk);
+      const decimals = Number(mintInfo.decimals ?? 0);
+      const raw = Number(amount);
+      if (!raw || raw <= 0) throw new Error('Enter a valid amount');
+      const amountBase = Math.floor(raw * Math.pow(10, decimals));
+
+      const tx = await staking.unstakeTokens(publicKey, mintPk, amountBase);
+      const {
+        context: { slot: minContextSlot },
+        value: { blockhash, lastValidBlockHeight },
+      } = await connection.getLatestBlockhashAndContext();
+      tx.feePayer = publicKey;
+      tx.recentBlockhash = blockhash;
+
+      const sig = await sendTransaction(tx, connection, { minContextSlot });
+      await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature: sig });
+
+      toast({ title: 'Unstaking Initiated', description: `Tx: ${sig}` });
+    } catch (error: any) {
+      console.error(error);
+      toast({ title: 'Unstaking Failed', description: error?.message || 'Failed to unstake tokens', variant: 'destructive' });
     }
   };
 
   const handleClaimRewards = async (tokenMint: string) => {
     try {
-      // TODO: Implement actual reward claiming logic with Solana program
-      toast({
-        title: "Rewards Claimed",
-        description: "Successfully claimed your staking rewards!",
-      });
-    } catch (error) {
-      toast({
-        title: "Claim Failed",
-        description: "Failed to claim rewards. Please try again.",
-        variant: "destructive",
-      });
+      if (!publicKey) throw new Error('Wallet not connected');
+      const staking = new StakingProgram(connection, walletCtx);
+      const mintPk = new PublicKey(tokenMint);
+
+      const tx = await staking.claimRewards(publicKey, mintPk);
+      const {
+        context: { slot: minContextSlot },
+        value: { blockhash, lastValidBlockHeight },
+      } = await connection.getLatestBlockhashAndContext();
+      tx.feePayer = publicKey;
+      tx.recentBlockhash = blockhash;
+
+      const sig = await sendTransaction(tx, connection, { minContextSlot });
+      await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature: sig });
+
+      toast({ title: 'Rewards Claimed', description: `Tx: ${sig}` });
+    } catch (error: any) {
+      console.error(error);
+      toast({ title: 'Claim Failed', description: error?.message || 'Failed to claim rewards', variant: 'destructive' });
     }
   };
 

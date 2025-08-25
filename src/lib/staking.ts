@@ -1,6 +1,6 @@
 import { Connection, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
 import { Program, AnchorProvider, web3, BN } from '@coral-xyz/anchor';
-import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 
 // Import the staking program IDL
 import stakingIdl from './staking-program-idl.json';
@@ -47,8 +47,14 @@ export class StakingProgram {
 
   constructor(connection: Connection, wallet: any) {
     const provider = new AnchorProvider(connection, wallet, {});
-    this.program = new Program(stakingIdl as any, provider);
+    this.program = new Program(stakingIdl as any, provider, STAKING_PROGRAM_ID);
     this.connection = connection;
+  }
+
+  private async resolveTokenProgramId(mint: PublicKey): Promise<PublicKey> {
+    const mintAccInfo = await this.connection.getAccountInfo(mint);
+    const isToken2022 = mintAccInfo?.owner?.equals(TOKEN_2022_PROGRAM_ID) ?? false;
+    return isToken2022 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
   }
 
   // Get the pool PDA
@@ -97,6 +103,7 @@ export class StakingProgram {
     const [rewardVaultPDA] = await this.getRewardVaultPDA();
 
     const transaction = new Transaction();
+    const tokenProgram = await this.resolveTokenProgramId(stakeMint);
     const instruction = await this.program.methods
       .initializePool()
       .accounts({
@@ -106,7 +113,7 @@ export class StakingProgram {
         stakeVault: stakeVaultPDA,
         rewardVault: rewardVaultPDA,
         systemProgram: SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: tokenProgram,
       })
       .instruction();
 
@@ -129,6 +136,7 @@ export class StakingProgram {
     // Note: This is a placeholder - the actual implementation would depend on the
     // specific methods available in your staking program IDL
     try {
+      const tokenProgram = await this.resolveTokenProgramId(stakeMint);
       const instruction = await this.program.methods
         .stake(new BN(amount))
         .accounts({
@@ -138,7 +146,7 @@ export class StakingProgram {
           stakeMint: stakeMint,
           stakeVault: stakeVaultPDA,
           systemProgram: SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: tokenProgram,
         })
         .instruction();
 
@@ -164,6 +172,7 @@ export class StakingProgram {
     const transaction = new Transaction();
     
     try {
+      const tokenProgram = await this.resolveTokenProgramId(stakeMint);
       const instruction = await this.program.methods
         .unstake(new BN(amount))
         .accounts({
@@ -173,7 +182,7 @@ export class StakingProgram {
           stakeMint: stakeMint,
           stakeVault: stakeVaultPDA,
           systemProgram: SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: tokenProgram,
         })
         .instruction();
 
@@ -198,6 +207,7 @@ export class StakingProgram {
     const transaction = new Transaction();
     
     try {
+      const tokenProgram = await this.resolveTokenProgramId(stakeMint);
       const instruction = await this.program.methods
         .claimRewards()
         .accounts({
@@ -206,7 +216,7 @@ export class StakingProgram {
           user: userWallet,
           rewardVault: rewardVaultPDA,
           systemProgram: SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: tokenProgram,
         })
         .instruction();
 
