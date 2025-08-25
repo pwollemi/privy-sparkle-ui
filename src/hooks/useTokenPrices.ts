@@ -13,14 +13,18 @@ export const useTokenPrices = (tokenMints: string[]) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('useTokenPrices effect triggered with mints:', tokenMints);
     if (tokenMints.length === 0) {
+      console.log('No token mints provided, resetting prices');
       setPrices({});
+      setIsLoading(false);
       return;
     }
 
     const fetchPrices = async () => {
       setIsLoading(true);
       setError(null);
+      console.log('Fetching prices for token mints:', tokenMints);
 
       try {
         // Get latest price for each token
@@ -33,8 +37,11 @@ export const useTokenPrices = (tokenMints: string[]) => {
         if (supabaseError) {
           console.error('Error fetching token prices:', supabaseError);
           setError('Failed to fetch token prices');
+          setIsLoading(false);
           return;
         }
+
+        console.log('Price history data:', data);
 
         // Get the latest price for each token
         const latestPrices: Record<string, number> = {};
@@ -44,6 +51,7 @@ export const useTokenPrices = (tokenMints: string[]) => {
           }
         });
 
+        console.log('Latest prices:', latestPrices);
         setPrices(latestPrices);
       } catch (err) {
         console.error('Error fetching prices:', err);
