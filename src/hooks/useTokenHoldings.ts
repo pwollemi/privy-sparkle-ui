@@ -40,8 +40,9 @@ export const useTokenHoldings = (): UseTokenHoldingsReturn => {
 
     try {
       const walletAddress = publicKey.toString();
+      console.log('Fetching holdings for wallet:', walletAddress);
       
-      // First get token balances
+      // Get token balances
       const { data: balancesData, error: balancesError } = await supabase
         .from('token_balances')
         .select('token_mint, balance, last_updated')
@@ -55,6 +56,8 @@ export const useTokenHoldings = (): UseTokenHoldingsReturn => {
         return;
       }
 
+      console.log('Token balances data:', balancesData);
+
       if (!balancesData || balancesData.length === 0) {
         setHoldings([]);
         return;
@@ -62,6 +65,7 @@ export const useTokenHoldings = (): UseTokenHoldingsReturn => {
 
       // Get token mints from balances
       const tokenMints = balancesData.map(b => b.token_mint);
+      console.log('Token mints to fetch:', tokenMints);
 
       // Get token details for these mints
       const { data: tokensData, error: tokensError } = await supabase
@@ -76,9 +80,12 @@ export const useTokenHoldings = (): UseTokenHoldingsReturn => {
         return;
       }
 
+      console.log('Tokens data:', tokensData);
+
       // Combine the data
       const transformedData: TokenHolding[] = balancesData.map(balance => {
         const tokenInfo = tokensData?.find(token => token.base_mint === balance.token_mint);
+        console.log(`Matching token for ${balance.token_mint}:`, tokenInfo);
         return {
           token_mint: balance.token_mint,
           balance: Number(balance.balance),
@@ -92,6 +99,7 @@ export const useTokenHoldings = (): UseTokenHoldingsReturn => {
         };
       });
 
+      console.log('Final transformed data:', transformedData);
       setHoldings(transformedData);
     } catch (err) {
       console.error('Error fetching holdings:', err);
