@@ -24,7 +24,9 @@ const Portfolio = () => {
   
   const { holdings, isLoading: holdingsLoading, error: holdingsError, refetch } = useTokenHoldings();
   const tokenMints = holdings.map(h => h.token_mint);
+  console.log('Portfolio: tokenMints for prices:', tokenMints);
   const { prices, isLoading: pricesLoading } = useTokenPrices(tokenMints);
+  console.log('Portfolio: holdingsLoading:', holdingsLoading, 'pricesLoading:', pricesLoading);
 
   const isLoading = holdingsLoading || pricesLoading;
 

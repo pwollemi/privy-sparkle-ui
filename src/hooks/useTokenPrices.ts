@@ -62,7 +62,7 @@ export const useTokenPrices = (tokenMints: string[]) => {
     };
 
     fetchPrices();
-  }, [tokenMints]);
+  }, [JSON.stringify(tokenMints)]); // Use JSON.stringify to avoid infinite re-renders
 
   return { prices, isLoading, error };
 };
