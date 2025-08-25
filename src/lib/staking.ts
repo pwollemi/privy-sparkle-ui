@@ -50,6 +50,17 @@ export class StakingProgram {
     this.program = new Program(stakingIdl as any, provider);
     this.connection = connection;
   }
+  private toCamelCase(name: string): string {
+    return name.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+  }
+
+  private getMethodByKeyword(keyword: string) {
+    const idl: any = this.program.idl as any;
+    const found = idl?.instructions?.find((ix: any) => String(ix.name).toLowerCase().includes(keyword.toLowerCase()));
+    if (!found) return null;
+    const methodName = this.toCamelCase(found.name);
+    return (this.program.methods as any)[methodName];
+  }
 
   private async resolveTokenProgramId(mint: PublicKey): Promise<PublicKey> {
     const mintAccInfo = await this.connection.getAccountInfo(mint);
@@ -137,8 +148,12 @@ export class StakingProgram {
     // specific methods available in your staking program IDL
     try {
       const tokenProgram = await this.resolveTokenProgramId(stakeMint);
-      const instruction = await this.program.methods
-        .stake(new BN(amount))
+      const stakeMethod = this.getMethodByKeyword('stake');
+      if (!stakeMethod) {
+        const available = (this.program.idl as any)?.instructions?.map((i: any) => i.name).join(', ');
+        throw new Error(`Stake instruction not found in IDL. Available: ${available || 'none'}`);
+      }
+      const instruction = await stakeMethod(new BN(amount))
         .accounts({
           pool: poolPDA,
           userStake: userStakePDA,
@@ -173,8 +188,12 @@ export class StakingProgram {
     
     try {
       const tokenProgram = await this.resolveTokenProgramId(stakeMint);
-      const instruction = await this.program.methods
-        .unstake(new BN(amount))
+      let method = this.getMethodByKeyword('unstake') || this.getMethodByKeyword('withdraw');
+      if (!method) {
+        const available = (this.program.idl as any)?.instructions?.map((i: any) => i.name).join(', ');
+        throw new Error(`Unstake instruction not found in IDL. Available: ${available || 'none'}`);
+      }
+      const instruction = await method(new BN(amount))
         .accounts({
           pool: poolPDA,
           userStake: userStakePDA,
@@ -208,8 +227,12 @@ export class StakingProgram {
     
     try {
       const tokenProgram = await this.resolveTokenProgramId(stakeMint);
-      const instruction = await this.program.methods
-        .claimRewards()
+      const method = this.getMethodByKeyword('claim') || this.getMethodByKeyword('harvest');
+      if (!method) {
+        const available = (this.program.idl as any)?.instructions?.map((i: any) => i.name).join(', ');
+        throw new Error(`Claim instruction not found in IDL. Available: ${available || 'none'}`);
+      }
+      const instruction = await method()
         .accounts({
           pool: poolPDA,
           userStake: userStakePDA,
