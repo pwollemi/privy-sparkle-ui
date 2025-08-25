@@ -47,7 +47,7 @@ export class StakingProgram {
 
   constructor(connection: Connection, wallet: any) {
     const provider = new AnchorProvider(connection, wallet, {});
-    this.program = new Program(stakingIdl as any, provider, STAKING_PROGRAM_ID);
+    this.program = new Program(stakingIdl as any, provider);
     this.connection = connection;
   }
 
