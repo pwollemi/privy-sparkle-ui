@@ -92,6 +92,12 @@ const Staking = () => {
       tx.feePayer = publicKey;
       tx.recentBlockhash = blockhash;
 
+      const sim = await connection.simulateTransaction(tx);
+      if (sim.value.err) {
+        console.error('❌ Simulation failed:', sim.value.err, sim.value.logs);
+        throw new Error('Transaction simulation failed. Check console for program logs.');
+      }
+
       const sig = await sendTransaction(tx, connection, { minContextSlot });
       await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature: sig });
 
@@ -132,6 +138,12 @@ const Staking = () => {
       tx.feePayer = publicKey;
       tx.recentBlockhash = blockhash;
 
+      const sim = await connection.simulateTransaction(tx);
+      if (sim.value.err) {
+        console.error('❌ Simulation failed:', sim.value.err, sim.value.logs);
+        throw new Error('Transaction simulation failed. Check console for program logs.');
+      }
+
       const sig = await sendTransaction(tx, connection, { minContextSlot });
       await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature: sig });
 
@@ -164,6 +176,12 @@ const Staking = () => {
       } = await connection.getLatestBlockhashAndContext();
       tx.feePayer = publicKey;
       tx.recentBlockhash = blockhash;
+
+      const sim = await connection.simulateTransaction(tx);
+      if (sim.value.err) {
+        console.error('❌ Simulation failed:', sim.value.err, sim.value.logs);
+        throw new Error('Transaction simulation failed. Check console for program logs.');
+      }
 
       const sig = await sendTransaction(tx, connection, { minContextSlot });
       await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature: sig });

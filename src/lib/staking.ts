@@ -179,7 +179,7 @@ export class StakingProgram {
       });
 
       const instruction = await this.program.methods
-        .stake(new BN(amount))
+        .stake(new BN(amount.toString()))
         .accounts({
           pool: poolPDA,
           stakeMint: stakeMint,
@@ -217,7 +217,7 @@ export class StakingProgram {
     try {
       const tokenProgram = await this.resolveTokenProgramId(stakeMint);
       const instruction = await this.program.methods
-        .withdraw(new BN(amount))
+        .withdraw(new BN(amount.toString()))
         .accounts({
           pool: poolPDA,
           stakeMint: stakeMint,
