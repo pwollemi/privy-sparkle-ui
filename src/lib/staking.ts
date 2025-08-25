@@ -39,7 +39,7 @@ export const STAKING_PROGRAM_ID = new PublicKey('7RXwD6sJmeFnkovweVFNqrhHAeX5nva
 export const POOL_SEED = 'pool';
 export const STAKE_VAULT_SEED = 'stake_vault';
 export const REWARD_VAULT_SEED = 'reward_vault';
-export const USER_STAKE_SEED = 'user_stake';
+export const POSITION_SEED = 'position';
 
 export class StakingProgram {
   private program: Program;
@@ -92,13 +92,14 @@ export class StakingProgram {
     );
   }
 
-  // Get the user stake account PDA
-  async getUserStakePDA(userWallet: PublicKey, stakeMint: PublicKey): Promise<[PublicKey, number]> {
+  // Get the user position account PDA
+  async getUserPositionPDA(userWallet: PublicKey): Promise<[PublicKey, number]> {
+    const [poolPDA] = await this.getPoolPDA();
     return await PublicKey.findProgramAddress(
       [
-        Buffer.from(USER_STAKE_SEED),
+        Buffer.from(POSITION_SEED),
+        poolPDA.toBuffer(),
         userWallet.toBuffer(),
-        stakeMint.toBuffer(),
       ],
       STAKING_PROGRAM_ID
     );
@@ -136,32 +137,28 @@ export class StakingProgram {
   async stakeTokens(
     userWallet: PublicKey,
     stakeMint: PublicKey,
+    userTokenAccount: PublicKey,
     amount: number
   ): Promise<Transaction> {
     const [poolPDA] = await this.getPoolPDA();
-    const [userStakePDA] = await this.getUserStakePDA(userWallet, stakeMint);
+    const [positionPDA] = await this.getUserPositionPDA(userWallet);
     const [stakeVaultPDA] = await this.getStakeVaultPDA();
 
     const transaction = new Transaction();
     
-    // Note: This is a placeholder - the actual implementation would depend on the
-    // specific methods available in your staking program IDL
     try {
       const tokenProgram = await this.resolveTokenProgramId(stakeMint);
-      const stakeMethod = this.getMethodByKeyword('stake');
-      if (!stakeMethod) {
-        const available = (this.program.idl as any)?.instructions?.map((i: any) => i.name).join(', ');
-        throw new Error(`Stake instruction not found in IDL. Available: ${available || 'none'}`);
-      }
-      const instruction = await stakeMethod(new BN(amount))
+      const instruction = await this.program.methods
+        .stake(new BN(amount))
         .accounts({
           pool: poolPDA,
-          userStake: userStakePDA,
-          user: userWallet,
           stakeMint: stakeMint,
+          position: positionPDA,
+          user: userWallet,
+          userTokenAccount: userTokenAccount,
           stakeVault: stakeVaultPDA,
-          systemProgram: SystemProgram.programId,
           tokenProgram: tokenProgram,
+          systemProgram: SystemProgram.programId,
         })
         .instruction();
 
@@ -178,30 +175,28 @@ export class StakingProgram {
   async unstakeTokens(
     userWallet: PublicKey,
     stakeMint: PublicKey,
+    userTokenAccount: PublicKey,
     amount: number
   ): Promise<Transaction> {
     const [poolPDA] = await this.getPoolPDA();
-    const [userStakePDA] = await this.getUserStakePDA(userWallet, stakeMint);
+    const [positionPDA] = await this.getUserPositionPDA(userWallet);
     const [stakeVaultPDA] = await this.getStakeVaultPDA();
 
     const transaction = new Transaction();
     
     try {
       const tokenProgram = await this.resolveTokenProgramId(stakeMint);
-      let method = this.getMethodByKeyword('unstake') || this.getMethodByKeyword('withdraw');
-      if (!method) {
-        const available = (this.program.idl as any)?.instructions?.map((i: any) => i.name).join(', ');
-        throw new Error(`Unstake instruction not found in IDL. Available: ${available || 'none'}`);
-      }
-      const instruction = await method(new BN(amount))
+      const instruction = await this.program.methods
+        .withdraw(new BN(amount))
         .accounts({
           pool: poolPDA,
-          userStake: userStakePDA,
-          user: userWallet,
           stakeMint: stakeMint,
+          position: positionPDA,
+          user: userWallet,
+          userTokenAccount: userTokenAccount,
           stakeVault: stakeVaultPDA,
-          systemProgram: SystemProgram.programId,
           tokenProgram: tokenProgram,
+          systemProgram: SystemProgram.programId,
         })
         .instruction();
 
@@ -217,28 +212,26 @@ export class StakingProgram {
   // Claim rewards
   async claimRewards(
     userWallet: PublicKey,
-    stakeMint: PublicKey
+    stakeMint: PublicKey,
+    userTokenAccount: PublicKey
   ): Promise<Transaction> {
     const [poolPDA] = await this.getPoolPDA();
-    const [userStakePDA] = await this.getUserStakePDA(userWallet, stakeMint);
+    const [positionPDA] = await this.getUserPositionPDA(userWallet);
     const [rewardVaultPDA] = await this.getRewardVaultPDA();
 
     const transaction = new Transaction();
     
     try {
       const tokenProgram = await this.resolveTokenProgramId(stakeMint);
-      const method = this.getMethodByKeyword('claim') || this.getMethodByKeyword('harvest');
-      if (!method) {
-        const available = (this.program.idl as any)?.instructions?.map((i: any) => i.name).join(', ');
-        throw new Error(`Claim instruction not found in IDL. Available: ${available || 'none'}`);
-      }
-      const instruction = await method()
+      const instruction = await this.program.methods
+        .claimRewards()
         .accounts({
           pool: poolPDA,
-          userStake: userStakePDA,
+          stakeMint: stakeMint,
+          position: positionPDA,
           user: userWallet,
+          userTokenAccount: userTokenAccount,
           rewardVault: rewardVaultPDA,
-          systemProgram: SystemProgram.programId,
           tokenProgram: tokenProgram,
         })
         .instruction();
@@ -266,16 +259,16 @@ export class StakingProgram {
     }
   }
 
-  // Get user stake info
-  async getUserStakeInfo(userWallet: PublicKey, stakeMint: PublicKey): Promise<any> {
+  // Get user position info
+  async getUserPositionInfo(userWallet: PublicKey): Promise<any> {
     try {
-      const [userStakePDA] = await this.getUserStakePDA(userWallet, stakeMint);
+      const [positionPDA] = await this.getUserPositionPDA(userWallet);
       // TODO: Implement proper account fetching based on actual IDL structure
-      // const userStakeAccount = await this.program.account.userStake.fetch(userStakePDA);
-      // return userStakeAccount;
+      // const positionAccount = await this.program.account.position.fetch(positionPDA);
+      // return positionAccount;
       return null;
     } catch (error) {
-      console.error('Error fetching user stake info:', error);
+      console.error('Error fetching user position info:', error);
       return null;
     }
   }

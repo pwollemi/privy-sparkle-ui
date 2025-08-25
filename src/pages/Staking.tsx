@@ -16,7 +16,7 @@ import { toast } from '@/hooks/use-toast';
 import { StakingProgram } from '@/lib/staking';
 import { connection } from '@/lib/solana-program';
 import { PublicKey } from '@solana/web3.js';
-import { getMint } from '@solana/spl-token';
+import { getMint, getAssociatedTokenAddress, TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 
 const Staking = () => {
   const walletCtx = useWallet();
@@ -45,6 +45,13 @@ const Staking = () => {
     return amount.toLocaleString(undefined, { maximumFractionDigits: 6 });
   };
 
+  // Helper function to resolve token program ID
+  const resolveTokenProgramId = async (mint: PublicKey): Promise<PublicKey> => {
+    const mintAccInfo = await connection.getAccountInfo(mint);
+    const isToken2022 = mintAccInfo?.owner?.equals(TOKEN_2022_PROGRAM_ID) ?? false;
+    return isToken2022 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
+  };
+
   const handleStake = async () => {
     if (!selectedToken || !stakeAmount) {
       toast({
@@ -59,13 +66,22 @@ const Staking = () => {
       if (!publicKey) throw new Error('Wallet not connected');
       const staking = new StakingProgram(connection, walletCtx);
       const mintPk = new PublicKey(selectedToken);
-      const mintInfo = await getMint(connection, mintPk);
+      const tokenProgram = await resolveTokenProgramId(mintPk);
+      const mintInfo = await getMint(connection, mintPk, undefined, tokenProgram);
       const decimals = Number(mintInfo.decimals ?? 0);
       const raw = Number(stakeAmount);
       if (!raw || raw <= 0) throw new Error('Enter a valid amount');
       const amountBase = Math.floor(raw * Math.pow(10, decimals));
 
-      const tx = await staking.stakeTokens(publicKey, mintPk, amountBase);
+      // Get user's token account
+      const tokenAccount = await getAssociatedTokenAddress(
+        mintPk,
+        publicKey,
+        false,
+        tokenProgram
+      );
+
+      const tx = await staking.stakeTokens(publicKey, mintPk, tokenAccount, amountBase);
       const {
         context: { slot: minContextSlot },
         value: { blockhash, lastValidBlockHeight },
@@ -90,13 +106,22 @@ const Staking = () => {
       if (!publicKey) throw new Error('Wallet not connected');
       const staking = new StakingProgram(connection, walletCtx);
       const mintPk = new PublicKey(tokenMint);
-      const mintInfo = await getMint(connection, mintPk);
+      const tokenProgram = await resolveTokenProgramId(mintPk);
+      const mintInfo = await getMint(connection, mintPk, undefined, tokenProgram);
       const decimals = Number(mintInfo.decimals ?? 0);
       const raw = Number(amount);
       if (!raw || raw <= 0) throw new Error('Enter a valid amount');
       const amountBase = Math.floor(raw * Math.pow(10, decimals));
 
-      const tx = await staking.unstakeTokens(publicKey, mintPk, amountBase);
+      // Get user's token account
+      const tokenAccount = await getAssociatedTokenAddress(
+        mintPk,
+        publicKey,
+        false,
+        tokenProgram
+      );
+
+      const tx = await staking.unstakeTokens(publicKey, mintPk, tokenAccount, amountBase);
       const {
         context: { slot: minContextSlot },
         value: { blockhash, lastValidBlockHeight },
@@ -120,7 +145,16 @@ const Staking = () => {
       const staking = new StakingProgram(connection, walletCtx);
       const mintPk = new PublicKey(tokenMint);
 
-      const tx = await staking.claimRewards(publicKey, mintPk);
+      // Get user's token account
+      const tokenProgram = await resolveTokenProgramId(mintPk);
+      const tokenAccount = await getAssociatedTokenAddress(
+        mintPk,
+        publicKey,
+        false,
+        tokenProgram
+      );
+
+      const tx = await staking.claimRewards(publicKey, mintPk, tokenAccount);
       const {
         context: { slot: minContextSlot },
         value: { blockhash, lastValidBlockHeight },
