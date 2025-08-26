@@ -331,10 +331,10 @@ const Staking = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              {stakingLoading ? '...' : `$${formatCurrency(totalStaked)}`}
+              {stakingLoading ? '...' : `${formatTokenAmount(totalStaked)}`}
             </div>
             <p className="text-xs text-muted-foreground">
-              Across {stakedPositions.length} positions
+              Tokens staked across {stakedPositions.length} positions
             </p>
           </CardContent>
         </Card>
@@ -346,10 +346,10 @@ const Staking = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-neon-green">
-              {stakingLoading ? '...' : `$${formatCurrency(totalRewards)}`}
+              {stakingLoading ? '...' : `${formatTokenAmount(totalRewards)}`}
             </div>
             <p className="text-xs text-muted-foreground">
-              Available to claim
+              Tokens available to claim
             </p>
           </CardContent>
         </Card>
@@ -369,6 +369,38 @@ const Staking = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Staked Amounts Breakdown */}
+      {stakedPositions.length > 0 && (
+        <Card className="bg-gradient-card border-border/50 mb-8">
+          <CardHeader>
+            <CardTitle className="text-lg">Staked Amounts by Token</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {stakedPositions.map((position, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                      <span className="text-xs font-bold text-primary">{position.tokenSymbol.charAt(0)}</span>
+                    </div>
+                    <div>
+                      <p className="font-medium">{position.tokenSymbol}</p>
+                      <p className="text-sm text-muted-foreground">{position.tokenName}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">{formatTokenAmount(position.stakedAmount)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatTokenAmount(position.pendingRewards)} pending
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="stake" className="space-y-6">
         <TabsList className="grid w-full grid-cols-2">
