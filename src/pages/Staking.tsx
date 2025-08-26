@@ -612,7 +612,7 @@ const Staking = () => {
 
                           {/* Pending Rewards Calculation */}
                           <div className="border-t border-border/50 pt-3 mb-4">
-                            <h5 className="text-xs text-muted-foreground mb-2 font-semibold">Pending Rewards Formula: reward_owed + (amount × delta × time_since_update) ÷ decimals</h5>
+                            <h5 className="text-xs text-muted-foreground mb-2 font-semibold">{position.debugIsZeroDelta ? 'Pending Rewards Formula (Zero Δ): reward_owed + (acc_reward_per_share × time_since_update) ÷ decimals' : 'Pending Rewards Formula: reward_owed + (amount × delta × time_since_update) ÷ decimals'}</h5>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs mb-3">
                               <div>
                                 <p className="text-muted-foreground mb-1">Reward Owed</p>
