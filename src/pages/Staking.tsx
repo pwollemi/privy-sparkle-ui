@@ -28,12 +28,22 @@ const Staking = () => {
   const [selectedToken, setSelectedToken] = useState<string>('');
   const [stakeAmount, setStakeAmount] = useState('');
   const [unstakeAmount, setUnstakeAmount] = useState('');
+  const [poolData, setPoolData] = useState<{reward_rate: number, total_staked: number} | null>(null);
 
   useEffect(() => {
     if (!connected) {
       navigate('/');
     }
   }, [connected, navigate]);
+
+  // Mock pool data - in real implementation, this would come from the Solana program
+  useEffect(() => {
+    // Simulating pool data fetch
+    setPoolData({
+      reward_rate: 1000000, // Example reward rate in lamports per second
+      total_staked: 5000000000000000, // Example total staked in lamports
+    });
+  }, []);
 
   const formatNumber = (num: number) => {
     if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
@@ -52,6 +62,17 @@ const Staking = () => {
 
   const formatTokenAmount = (amount: number) => {
     return amount.toLocaleString(undefined, { maximumFractionDigits: 6 });
+  };
+
+  const calculateAPR = (reward_rate: number, total_staked: number) => {
+    if (!total_staked || total_staked === 0) return 0;
+    // APR = reward_rate * 365 * 86400 / total_staked / 1e9
+    const apr = (reward_rate * 365 * 86400) / (total_staked / 1e9);
+    return apr;
+  };
+
+  const formatAPR = (apr: number) => {
+    return apr % 1 === 0 ? apr.toString() : apr.toFixed(2);
   };
 
   // Helper function to resolve token program ID
@@ -77,7 +98,7 @@ const Staking = () => {
           token_name: selectedHolding.token.name,
           staked_amount: amount,
           pending_rewards: 0,
-          apy: 15,
+          apy: poolData ? calculateAPR(poolData.reward_rate, poolData.total_staked) : 15,
           lock_period: 30,
           lock_progress: 0,
         }, {
@@ -333,15 +354,15 @@ const Staking = () => {
 
         <Card className="bg-gradient-card border-border/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">APY</CardTitle>
+            <CardTitle className="text-sm font-medium">APR</CardTitle>
             <Zap className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-accent">
-              12.5%
+              {poolData ? `${formatAPR(calculateAPR(poolData.reward_rate, poolData.total_staked))}%` : '15%'}
             </div>
             <p className="text-xs text-muted-foreground">
-              Average across all pools
+              Current pool rate
             </p>
           </CardContent>
         </Card>
@@ -414,7 +435,7 @@ const Staking = () => {
                           <div className="text-right">
                             <p className="font-medium">{formatTokenAmount(holding.balance)}</p>
                             <Badge variant="secondary" className="text-xs">
-                              15% APY
+                              {poolData ? `${formatAPR(calculateAPR(poolData.reward_rate, poolData.total_staked))}% APR` : '15% APR'}
                             </Badge>
                           </div>
                         </div>
@@ -428,7 +449,7 @@ const Staking = () => {
                 <div className="space-y-4 p-6 bg-card/50 rounded-lg border border-border/50">
                   <div className="flex items-center gap-2">
                     <Label htmlFor="stake-amount">Amount to Stake</Label>
-                    <Badge variant="outline">15% APY</Badge>
+                    <Badge variant="outline">{poolData ? `${formatAPR(calculateAPR(poolData.reward_rate, poolData.total_staked))}% APR` : '15% APR'}</Badge>
                   </div>
                   <div className="flex gap-2">
                     <Input
@@ -501,7 +522,7 @@ const Staking = () => {
                               <p className="text-sm text-muted-foreground">{position.tokenName}</p>
                             </div>
                           </div>
-                          <Badge variant="secondary">{position.apy}% APY</Badge>
+                          <Badge variant="secondary">{formatAPR(position.apy)}% APR</Badge>
                         </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
