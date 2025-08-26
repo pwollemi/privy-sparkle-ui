@@ -29,7 +29,7 @@ export interface PositionData {
   reward_owed: number;
 }
 
-// Calculate pending rewards using the formula: reward_owed + amount * (pool.acc_reward_per_share - position.reward_per_share_paid) / PRECISION
+// Calculate pending rewards using the formula: amount * (acc_reward_per_share - reward_per_share_paid) / PRECISION - reward_owed
 export const calculatePendingRewards = (
   amount: number,
   poolAccRewardPerShare: number,
@@ -37,8 +37,7 @@ export const calculatePendingRewards = (
   rewardOwed: number = 0
 ): number => {
   const increment = (amount * (poolAccRewardPerShare - positionRewardPerSharePaid)) / PRECISION;
-  const total = rewardOwed + increment;
-  return total < 0 ? 0 : total;
+  return increment - rewardOwed;
 };
 
 export interface UseStakingReturn {
