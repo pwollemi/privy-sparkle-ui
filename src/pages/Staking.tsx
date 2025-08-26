@@ -613,7 +613,7 @@ const Staking = () => {
                           {/* Pending Rewards Calculation */}
                           <div className="border-t border-border/50 pt-3 mb-4">
                             <h5 className="text-xs text-muted-foreground mb-2 font-semibold">Pending Rewards Formula: reward_owed + (amount × delta × time_since_update) ÷ decimals</h5>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs mb-3">
                               <div>
                                 <p className="text-muted-foreground mb-1">Reward Owed</p>
                                 <p className="font-mono">{position.debugRewardOwed.toLocaleString()}</p>
@@ -631,7 +631,29 @@ const Staking = () => {
                                 <p className="font-mono">{position.debugPendingCalculation.toLocaleString()}</p>
                               </div>
                             </div>
-                            <div className="mt-2 p-2 bg-accent/20 rounded">
+                            
+                            {/* Pool Timestamps */}
+                            <div className="bg-accent/10 rounded p-2 mb-3">
+                              <h6 className="text-xs font-semibold text-muted-foreground mb-2">Pool Timestamps</h6>
+                              <div className="grid grid-cols-2 gap-4 text-xs">
+                                <div>
+                                  <p className="text-muted-foreground mb-1">Pool Last Update</p>
+                                  <p className="font-mono text-primary">{position.debugPoolLastUpdate}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {new Date(position.debugPoolLastUpdate * 1000).toLocaleString()}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground mb-1">Current Timestamp</p>
+                                  <p className="font-mono text-primary">{position.debugCurrentTimestamp}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {new Date(position.debugCurrentTimestamp * 1000).toLocaleString()}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="p-2 bg-accent/20 rounded">
                               <p className="text-xs text-muted-foreground">Total Pending: {position.debugRewardOwed.toLocaleString()} + {position.debugPendingCalculation.toLocaleString()} = <span className="font-semibold text-neon-green">{position.pendingRewards.toLocaleString()}</span></p>
                             </div>
                           </div>

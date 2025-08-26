@@ -25,6 +25,8 @@ export interface StakingPosition {
   debugTimeSinceUpdate: number;
   debugTokenDecimals: number;
   debugPendingCalculation: number;
+  debugPoolLastUpdate: number;
+  debugCurrentTimestamp: number;
 }
 
 export interface PoolData {
@@ -176,6 +178,8 @@ export const useStaking = (): UseStakingReturn => {
           debugTimeSinceUpdate: secondsSinceLastUpdate,
           debugTokenDecimals: tokenDecimals,
           debugPendingCalculation: (Number(pos.staked_amount) * delta * secondsSinceLastUpdate) / tokenDecimals,
+          debugPoolLastUpdate: poolData.last_update,
+          debugCurrentTimestamp: currentTimestamp,
         };
       });
 
