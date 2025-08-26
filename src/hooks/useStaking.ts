@@ -99,22 +99,41 @@ export const useStaking = (): UseStakingReturn => {
         throw new Error(`Failed to fetch staking positions: ${fetchError.message}`);
       }
 
-      // Mock pool data - in production, this would come from on-chain program
-      const poolData: PoolData = {
-        acc_reward_per_share: 1500000000, // Mock value
-        total_staked: 1000000, // Total staked in tokens
-        reward_rate: 47619, // Reward rate for ~15% APR
-        last_update: Math.floor(Date.now() / 1000) - 60, // Mock: last update 60s ago
-        token_decimals: 1e9, // Assuming 9 decimals for SPL tokens
-      };
-
-      // Initialize staking program to fetch on-chain position (for reward_owed)
+      // Fetch real pool data from on-chain program
       const stakingProgram = new StakingProgram(connection, {
         publicKey,
         signTransaction,
         signAllTransactions,
       } as any);
-      const onChainPosition = publicKey ? await stakingProgram.getUserPositionInfo(publicKey) : null;
+      
+      let poolData: PoolData;
+      let onChainPosition: any = null;
+      
+      try {
+        // Fetch actual pool data from the program
+        const poolInfo = await stakingProgram.getPoolInfo();
+        onChainPosition = publicKey ? await stakingProgram.getUserPositionInfo(publicKey) : null;
+        
+        poolData = {
+          acc_reward_per_share: Number(poolInfo?.accRewardPerShare ?? poolInfo?.acc_reward_per_share ?? 1500000000),
+          total_staked: Number(poolInfo?.totalStaked ?? poolInfo?.total_staked ?? 1000000),
+          reward_rate: Number(poolInfo?.rewardRate ?? poolInfo?.reward_rate ?? 47619),
+          last_update: Number(poolInfo?.lastUpdateTime ?? poolInfo?.last_update_time ?? Math.floor(Date.now() / 1000)),
+          token_decimals: 1e9, // Standard SPL token decimals
+        };
+      } catch (error) {
+        console.warn('Failed to fetch pool data, using fallback values:', error);
+        // Fallback to mock data if on-chain fetch fails
+        poolData = {
+          acc_reward_per_share: 1500000000,
+          total_staked: 1000000,
+          reward_rate: 47619,
+          last_update: Math.floor(Date.now() / 1000) - 60, // 60s ago as fallback
+          token_decimals: 1e9,
+        };
+        onChainPosition = publicKey ? await stakingProgram.getUserPositionInfo(publicKey).catch(() => null) : null;
+      }
+
       const rewardOwedOnChain = Number(onChainPosition?.rewardOwed ?? onChainPosition?.reward_owed ?? 0);
 
       const stakingPositions: StakingPosition[] = (positions || []).map(pos => {
