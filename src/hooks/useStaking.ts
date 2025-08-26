@@ -113,8 +113,16 @@ export const useStaking = (): UseStakingReturn => {
         // Mock position data - in production, this would come from on-chain program
         const positionRewardPerSharePaid = 1000000000; // Mock value
         
-        // Use on-chain reward_owed as pending value
-        const pending = rewardOwedOnChain;
+        // Calculate time elapsed since stake date in seconds
+        const stakeDate = new Date(pos.stake_date);
+        const now = new Date();
+        const timeElapsedSeconds = Math.floor((now.getTime() - stakeDate.getTime()) / 1000);
+        
+        // Calculate delta
+        const delta = poolData.acc_reward_per_share - positionRewardPerSharePaid;
+        
+        // Calculate pending rewards using the formula: reward_owed + amount * Delta * time_elapsed_in_seconds
+        const pending = rewardOwedOnChain + (Number(pos.staked_amount) * delta * timeElapsedSeconds) / PRECISION;
 
         // Calculate APR using the same formula as Staking page
         const calculatedAPR = poolData.total_staked > 0 
