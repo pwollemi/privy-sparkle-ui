@@ -17,13 +17,14 @@ import { StakingProgram } from '@/lib/staking';
 import { connection } from '@/lib/solana-program';
 import { PublicKey } from '@solana/web3.js';
 import { getMint, getAssociatedTokenAddress, TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
+import { supabase } from '@/integrations/supabase/client';
 
 const Staking = () => {
   const walletCtx = useWallet();
   const { connected, publicKey, sendTransaction } = walletCtx;
   const navigate = useNavigate();
   const { holdings, isLoading: holdingsLoading } = useTokenHoldings();
-  const { stakedPositions, totalStaked, totalRewards, isLoading: stakingLoading } = useStaking();
+  const { stakedPositions, totalStaked, totalRewards, isLoading: stakingLoading, refetch } = useStaking();
   const [selectedToken, setSelectedToken] = useState<string>('');
   const [stakeAmount, setStakeAmount] = useState('');
   const [unstakeAmount, setUnstakeAmount] = useState('');
@@ -50,6 +51,37 @@ const Staking = () => {
     const mintAccInfo = await connection.getAccountInfo(mint);
     const isToken2022 = mintAccInfo?.owner?.equals(TOKEN_2022_PROGRAM_ID) ?? false;
     return isToken2022 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
+  };
+
+  const saveStakingPosition = async (tokenMint: string, amount: number) => {
+    if (!publicKey) return;
+    
+    const selectedHolding = holdings.find(h => h.token_mint === tokenMint);
+    if (!selectedHolding?.token) return;
+
+    try {
+      const { error } = await supabase
+        .from('staking_positions')
+        .upsert({
+          user_wallet: publicKey.toString(),
+          token_mint: tokenMint,
+          token_symbol: selectedHolding.token.symbol,
+          token_name: selectedHolding.token.name,
+          staked_amount: amount,
+          pending_rewards: 0,
+          apy: 15,
+          lock_period: 30,
+          lock_progress: 0,
+        }, {
+          onConflict: 'user_wallet,token_mint'
+        });
+
+      if (error) {
+        console.error('Failed to save staking position:', error);
+      }
+    } catch (error) {
+      console.error('Failed to save staking position:', error);
+    }
   };
 
   const handleStake = async () => {
@@ -106,9 +138,13 @@ const Staking = () => {
       const sig = await sendTransaction(tx, connection, { minContextSlot });
       await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature: sig });
 
+      // Save position to database after successful staking
+      await saveStakingPosition(selectedToken, raw);
+      
       toast({ title: 'Staking Initiated', description: `Tx: ${sig}` });
       setStakeAmount('');
       setSelectedToken('');
+      refetch(); // Refresh positions
     } catch (error: any) {
       console.error(error);
       toast({ title: 'Staking Failed', description: error?.message || 'Failed to stake tokens', variant: 'destructive' });
@@ -144,15 +180,40 @@ const Staking = () => {
       tx.recentBlockhash = blockhash;
 
       const sim = await connection.simulateTransaction(tx);
+      console.log('🔍 Unstake simulation result:', sim);
+      console.log('🔍 Unstake program logs:', sim.value.logs);
       if (sim.value.err) {
-        console.error('❌ Simulation failed:', sim.value.err, sim.value.logs);
-        throw new Error('Transaction simulation failed. Check console for program logs.');
+        console.error('❌ Unstake simulation failed:', sim.value.err, sim.value.logs);
+        throw new Error(`Unstake transaction simulation failed: ${JSON.stringify(sim.value.err)}`);
       }
 
       const sig = await sendTransaction(tx, connection, { minContextSlot });
       await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature: sig });
 
+      // Update position in database after successful unstaking
+      const currentPosition = stakedPositions.find(p => p.tokenMint === tokenMint);
+      if (currentPosition) {
+        const newStakedAmount = currentPosition.stakedAmount - raw;
+        if (newStakedAmount <= 0) {
+          // Delete position if fully unstaked
+          await supabase
+            .from('staking_positions')
+            .delete()
+            .eq('user_wallet', publicKey.toString())
+            .eq('token_mint', tokenMint);
+        } else {
+          // Update remaining staked amount
+          await supabase
+            .from('staking_positions')
+            .update({ staked_amount: newStakedAmount })
+            .eq('user_wallet', publicKey.toString())
+            .eq('token_mint', tokenMint);
+        }
+      }
+
       toast({ title: 'Unstaking Initiated', description: `Tx: ${sig}` });
+      setUnstakeAmount('');
+      refetch(); // Refresh positions
     } catch (error: any) {
       console.error(error);
       toast({ title: 'Unstaking Failed', description: error?.message || 'Failed to unstake tokens', variant: 'destructive' });
@@ -183,15 +244,25 @@ const Staking = () => {
       tx.recentBlockhash = blockhash;
 
       const sim = await connection.simulateTransaction(tx);
+      console.log('🔍 Claim rewards simulation result:', sim);
+      console.log('🔍 Claim rewards program logs:', sim.value.logs);
       if (sim.value.err) {
-        console.error('❌ Simulation failed:', sim.value.err, sim.value.logs);
-        throw new Error('Transaction simulation failed. Check console for program logs.');
+        console.error('❌ Claim rewards simulation failed:', sim.value.err, sim.value.logs);
+        throw new Error(`Claim rewards transaction simulation failed: ${JSON.stringify(sim.value.err)}`);
       }
 
       const sig = await sendTransaction(tx, connection, { minContextSlot });
       await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature: sig });
 
+      // Reset pending rewards in database after successful claim
+      await supabase
+        .from('staking_positions')
+        .update({ pending_rewards: 0 })
+        .eq('user_wallet', publicKey.toString())
+        .eq('token_mint', tokenMint);
+
       toast({ title: 'Rewards Claimed', description: `Tx: ${sig}` });
+      refetch(); // Refresh positions
     } catch (error: any) {
       console.error(error);
       toast({ title: 'Claim Failed', description: error?.message || 'Failed to claim rewards', variant: 'destructive' });

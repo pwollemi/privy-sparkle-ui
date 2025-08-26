@@ -74,6 +74,54 @@ export type Database = {
         }
         Relationships: []
       }
+      staking_positions: {
+        Row: {
+          apy: number
+          created_at: string
+          id: string
+          lock_period: number
+          lock_progress: number
+          pending_rewards: number
+          stake_date: string
+          staked_amount: number
+          token_mint: string
+          token_name: string
+          token_symbol: string
+          updated_at: string
+          user_wallet: string
+        }
+        Insert: {
+          apy?: number
+          created_at?: string
+          id?: string
+          lock_period?: number
+          lock_progress?: number
+          pending_rewards?: number
+          stake_date?: string
+          staked_amount?: number
+          token_mint: string
+          token_name: string
+          token_symbol: string
+          updated_at?: string
+          user_wallet: string
+        }
+        Update: {
+          apy?: number
+          created_at?: string
+          id?: string
+          lock_period?: number
+          lock_progress?: number
+          pending_rewards?: number
+          stake_date?: string
+          staked_amount?: number
+          token_mint?: string
+          token_name?: string
+          token_symbol?: string
+          updated_at?: string
+          user_wallet?: string
+        }
+        Relationships: []
+      }
       token_balances: {
         Row: {
           balance: number

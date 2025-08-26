@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface StakingPosition {
   tokenMint: string;
@@ -44,42 +45,36 @@ export const useStaking = (): UseStakingReturn => {
     setError(null);
 
     try {
-      // TODO: Implement actual staking data fetching from Solana program
-      // For now, using mock data for demonstration
+      const walletAddress = publicKey.toString();
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Fetch staking positions from Supabase
+      const { data: positions, error: fetchError } = await supabase
+        .from('staking_positions')
+        .select('*')
+        .eq('user_wallet', walletAddress)
+        .gt('staked_amount', 0);
 
-      const mockPositions: StakingPosition[] = [
-        {
-          tokenMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-          tokenSymbol: 'USDC',
-          tokenName: 'USD Coin',
-          stakedAmount: 1000,
-          pendingRewards: 12.5,
-          apy: 15,
-          lockPeriod: 30,
-          lockProgress: 65,
-          stakeDate: new Date(Date.now() - 19 * 24 * 60 * 60 * 1000), // 19 days ago
-        },
-        {
-          tokenMint: 'So11111111111111111111111111111111111111112',
-          tokenSymbol: 'SOL',
-          tokenName: 'Solana',
-          stakedAmount: 50,
-          pendingRewards: 2.3,
-          apy: 12,
-          lockPeriod: 60,
-          lockProgress: 25,
-          stakeDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000), // 15 days ago
-        },
-      ];
+      if (fetchError) {
+        throw new Error(`Failed to fetch staking positions: ${fetchError.message}`);
+      }
 
-      setStakedPositions(mockPositions);
+      const stakingPositions: StakingPosition[] = (positions || []).map(pos => ({
+        tokenMint: pos.token_mint,
+        tokenSymbol: pos.token_symbol,
+        tokenName: pos.token_name,
+        stakedAmount: Number(pos.staked_amount),
+        pendingRewards: Number(pos.pending_rewards),
+        apy: Number(pos.apy),
+        lockPeriod: pos.lock_period,
+        lockProgress: Number(pos.lock_progress),
+        stakeDate: new Date(pos.stake_date),
+      }));
+
+      setStakedPositions(stakingPositions);
       
-      // Calculate totals (assuming $1 per token for simplicity)
-      const totalStakedValue = mockPositions.reduce((sum, pos) => sum + pos.stakedAmount, 0);
-      const totalRewardsValue = mockPositions.reduce((sum, pos) => sum + pos.pendingRewards, 0);
+      // Calculate totals
+      const totalStakedValue = stakingPositions.reduce((sum, pos) => sum + pos.stakedAmount, 0);
+      const totalRewardsValue = stakingPositions.reduce((sum, pos) => sum + pos.pendingRewards, 0);
       
       setTotalStaked(totalStakedValue);
       setTotalRewards(totalRewardsValue);
