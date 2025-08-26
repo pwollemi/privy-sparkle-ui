@@ -27,6 +27,8 @@ export interface PoolData {
   acc_reward_per_share: number;
   total_staked: number;
   reward_rate: number;
+  last_update: number; // epoch seconds
+  token_decimals: number; // e.g., 1e9 for 9 decimals
 }
 
 export interface PositionData {
@@ -97,7 +99,9 @@ export const useStaking = (): UseStakingReturn => {
       const poolData: PoolData = {
         acc_reward_per_share: 1500000000, // Mock value
         total_staked: 1000000, // Total staked in tokens
-        reward_rate: 47619 // Reward rate for ~15% APR
+        reward_rate: 47619, // Reward rate for ~15% APR
+        last_update: Math.floor(Date.now() / 1000) - 60, // Mock: last update 60s ago
+        token_decimals: 1e9, // Assuming 9 decimals for SPL tokens
       };
 
       // Initialize staking program to fetch on-chain position (for reward_owed)
@@ -113,16 +117,17 @@ export const useStaking = (): UseStakingReturn => {
         // Mock position data - in production, this would come from on-chain program
         const positionRewardPerSharePaid = 1000000000; // Mock value
         
-        // Calculate time elapsed since stake date in seconds
-        const stakeDate = new Date(pos.stake_date);
-        const now = new Date();
-        const timeElapsedSeconds = Math.floor((now.getTime() - stakeDate.getTime()) / 1000);
+        // Current timestamp and time since pool last update
+        const currentTimestamp = Math.floor(Date.now() / 1000);
+        const secondsSinceLastUpdate = Math.max(0, currentTimestamp - poolData.last_update);
+        const tokenDecimals = poolData.token_decimals ?? 1e9;
         
-        // Calculate delta
+        // Calculate delta between pool and position
         const delta = poolData.acc_reward_per_share - positionRewardPerSharePaid;
         
-        // Calculate pending rewards using the formula: reward_owed + amount * Delta * time_elapsed_in_seconds
-        const pending = rewardOwedOnChain + (Number(pos.staked_amount) * delta * timeElapsedSeconds) / PRECISION;
+        // Updated pending rewards formula:
+        // reward_owed + amount * Delta * (currenttimestamp - pool.last_update) / Token.Decimal
+        const pending = rewardOwedOnChain + (Number(pos.staked_amount) * delta * secondsSinceLastUpdate) / tokenDecimals;
 
         // Calculate APR using the same formula as Staking page
         const calculatedAPR = poolData.total_staked > 0 
