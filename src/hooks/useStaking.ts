@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { supabase } from '@/integrations/supabase/client';
+import { StakingProgram } from '@/lib/staking';
 
 // Precision constant for reward calculations
 const PRECISION = 1e9;
@@ -29,7 +30,7 @@ export interface PositionData {
   reward_owed: number;
 }
 
-// Calculate pending rewards using the formula: reward_owed + amount * (acc_reward_per_share - reward_per_share_paid) / PRECISION
+// Calculate pending rewards (unused when reward_owed available): reward_owed + amount * (acc_reward_per_share - reward_per_share_paid) / PRECISION
 export const calculatePendingRewards = (
   amount: number,
   poolAccRewardPerShare: number,
@@ -39,7 +40,7 @@ export const calculatePendingRewards = (
   const delta = poolAccRewardPerShare - positionRewardPerSharePaid;
   const earned = (amount * delta) / PRECISION;
   const pending = rewardOwed + earned;
-  return pending < 0 ? 0 : pending;
+  return pending;
 };
 
 export interface UseStakingReturn {
@@ -52,7 +53,8 @@ export interface UseStakingReturn {
 }
 
 export const useStaking = (): UseStakingReturn => {
-  const { connected, publicKey } = useWallet();
+  const { connected, publicKey, signTransaction, signAllTransactions } = useWallet() as any;
+  const { connection } = useConnection();
   const [stakedPositions, setStakedPositions] = useState<StakingPosition[]>([]);
   const [totalStaked, setTotalStaked] = useState(0);
   const [totalRewards, setTotalRewards] = useState(0);
@@ -93,17 +95,21 @@ export const useStaking = (): UseStakingReturn => {
         reward_rate: 47619 // Reward rate for ~15% APR
       };
 
+      // Initialize staking program to fetch on-chain position (for reward_owed)
+      const stakingProgram = new StakingProgram(connection, {
+        publicKey,
+        signTransaction,
+        signAllTransactions,
+      } as any);
+      const onChainPosition = publicKey ? await stakingProgram.getUserPositionInfo(publicKey) : null;
+      const rewardOwedOnChain = Number(onChainPosition?.rewardOwed ?? onChainPosition?.reward_owed ?? 0);
+
       const stakingPositions: StakingPosition[] = (positions || []).map(pos => {
         // Mock position data - in production, this would come from on-chain program
         const positionRewardPerSharePaid = 1000000000; // Mock value
         
-        // Calculate pending rewards using the on-chain formula
-        const calculatedPendingRewards = calculatePendingRewards(
-          Number(pos.staked_amount),
-          poolData.acc_reward_per_share,
-          positionRewardPerSharePaid,
-          Number(pos.pending_rewards || 0)
-        );
+        // Use on-chain reward_owed as pending value
+        const pending = rewardOwedOnChain;
 
         // Calculate APR using the same formula as Staking page
         const calculatedAPR = poolData.total_staked > 0 
@@ -115,7 +121,7 @@ export const useStaking = (): UseStakingReturn => {
           tokenSymbol: pos.token_symbol,
           tokenName: pos.token_name,
           stakedAmount: Number(pos.staked_amount),
-          pendingRewards: calculatedPendingRewards,
+          pendingRewards: pending,
           apy: calculatedAPR,
           lockPeriod: pos.lock_period,
           lockProgress: Number(pos.lock_progress),

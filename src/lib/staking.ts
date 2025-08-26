@@ -304,10 +304,8 @@ export class StakingProgram {
   async getUserPositionInfo(userWallet: PublicKey): Promise<any> {
     try {
       const [positionPDA] = await this.getUserPositionPDA(userWallet);
-      // TODO: Implement proper account fetching based on actual IDL structure
-      // const positionAccount = await this.program.account.position.fetch(positionPDA);
-      // return positionAccount;
-      return null;
+      const positionAccount = await (this.program.account as any).position.fetch(positionPDA);
+      return positionAccount;
     } catch (error) {
       console.error('Error fetching user position info:', error);
       return null;
