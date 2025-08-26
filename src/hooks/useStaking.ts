@@ -121,7 +121,7 @@ export const useStaking = (): UseStakingReturn => {
           total_staked: Number(poolInfo?.totalStaked ?? poolInfo?.total_staked ?? 1000000),
           reward_rate: Number(poolInfo?.rewardRate ?? poolInfo?.reward_rate ?? 47619),
           last_update: Number(poolInfo?.lastUpdateTime ?? poolInfo?.last_update_time ?? Math.floor(Date.now() / 1000)),
-          token_decimals: 1e9, // Standard SPL token decimals
+          token_decimals: 1e6, // 1,000,000 decimals as specified
         };
       } catch (error) {
         console.warn('Failed to fetch pool data, using fallback values:', error);
@@ -131,7 +131,7 @@ export const useStaking = (): UseStakingReturn => {
           total_staked: 1000000,
           reward_rate: 47619,
           last_update: Math.floor(Date.now() / 1000) - 60, // 60s ago as fallback
-          token_decimals: 1e9,
+          token_decimals: 1e6, // 1,000,000 decimals as specified
         };
         onChainPosition = publicKey ? await stakingProgram.getUserPositionInfo(publicKey).catch(() => null) : null;
       }
@@ -146,7 +146,7 @@ export const useStaking = (): UseStakingReturn => {
         // Current timestamp and time since pool last update
         const currentTimestamp = Math.floor(Date.now() / 1000);
         const secondsSinceLastUpdate = Math.max(0, currentTimestamp - poolData.last_update);
-        const tokenDecimals = poolData.token_decimals ?? 1e9;
+        const tokenDecimals = poolData.token_decimals ?? 1e6;
         
         // Calculate delta between pool and position
         const delta = poolData.acc_reward_per_share - positionRewardPerSharePaid;
