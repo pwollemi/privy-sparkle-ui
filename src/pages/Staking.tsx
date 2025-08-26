@@ -588,10 +588,12 @@ const Staking = () => {
 
                         {/* Debug Values Section */}
                         <div className="bg-muted/50 rounded-lg p-4 mb-4">
-                          <h4 className="font-semibold mb-3 text-sm text-muted-foreground">Debug Values</h4>
+                          <h4 className="font-semibold mb-3 text-sm text-muted-foreground">Debug Values - Position {position.tokenSymbol}</h4>
+                          
+                          {/* Position Debug Values */}
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs mb-4">
                             <div>
-                              <p className="text-muted-foreground mb-1">Amount</p>
+                              <p className="text-muted-foreground mb-1">Staked Amount</p>
                               <p className="font-mono">{position.debugAmount.toLocaleString()}</p>
                             </div>
                             <div>
@@ -607,15 +609,44 @@ const Staking = () => {
                               <p className="font-mono">{position.debugRewardPerSharePaid.toLocaleString()}</p>
                             </div>
                           </div>
-                          <div className="border-t border-border/50 pt-3">
-                            <div className="grid grid-cols-2 gap-4 text-xs">
+
+                          {/* Pending Rewards Calculation */}
+                          <div className="border-t border-border/50 pt-3 mb-4">
+                            <h5 className="text-xs text-muted-foreground mb-2 font-semibold">Pending Rewards Formula: reward_owed + (amount × delta × time_since_update) ÷ decimals</h5>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                               <div>
-                                <p className="text-muted-foreground mb-1">User Total Staked</p>
-                                <p className="font-mono font-semibold text-primary">{totalStaked.toLocaleString()}</p>
+                                <p className="text-muted-foreground mb-1">Reward Owed</p>
+                                <p className="font-mono">{position.debugRewardOwed.toLocaleString()}</p>
                               </div>
                               <div>
-                                <p className="text-muted-foreground mb-1">User Total Rewards</p>
-                                <p className="font-mono font-semibold text-neon-green">{totalRewards.toLocaleString()}</p>
+                                <p className="text-muted-foreground mb-1">Time Since Update (s)</p>
+                                <p className="font-mono">{position.debugTimeSinceUpdate.toLocaleString()}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground mb-1">Token Decimals</p>
+                                <p className="font-mono">{position.debugTokenDecimals.toLocaleString()}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground mb-1">Calculated Part</p>
+                                <p className="font-mono">{position.debugPendingCalculation.toLocaleString()}</p>
+                              </div>
+                            </div>
+                            <div className="mt-2 p-2 bg-accent/20 rounded">
+                              <p className="text-xs text-muted-foreground">Total Pending: {position.debugRewardOwed.toLocaleString()} + {position.debugPendingCalculation.toLocaleString()} = <span className="font-semibold text-neon-green">{position.pendingRewards.toLocaleString()}</span></p>
+                            </div>
+                          </div>
+
+                          {/* User Totals */}
+                          <div className="border-t border-border/50 pt-3">
+                            <h5 className="text-xs text-muted-foreground mb-2 font-semibold">User Totals (Sum of all positions)</h5>
+                            <div className="grid grid-cols-2 gap-4 text-xs">
+                              <div>
+                                <p className="text-muted-foreground mb-1">Total Staked Amount</p>
+                                <p className="font-mono font-semibold text-primary">{totalStaked.toLocaleString()} tokens</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground mb-1">Total Pending Rewards</p>
+                                <p className="font-mono font-semibold text-neon-green">{totalRewards.toLocaleString()} tokens</p>
                               </div>
                             </div>
                           </div>

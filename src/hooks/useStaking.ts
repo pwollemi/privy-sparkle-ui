@@ -21,6 +21,10 @@ export interface StakingPosition {
   debugAccRewardPerShare: number;
   debugRewardPerSharePaid: number;
   debugDelta: number;
+  debugRewardOwed: number;
+  debugTimeSinceUpdate: number;
+  debugTokenDecimals: number;
+  debugPendingCalculation: number;
 }
 
 export interface PoolData {
@@ -148,7 +152,11 @@ export const useStaking = (): UseStakingReturn => {
           debugAmount: Number(pos.staked_amount),
           debugAccRewardPerShare: poolData.acc_reward_per_share,
           debugRewardPerSharePaid: positionRewardPerSharePaid,
-          debugDelta: poolData.acc_reward_per_share - positionRewardPerSharePaid,
+          debugDelta: delta,
+          debugRewardOwed: rewardOwedOnChain,
+          debugTimeSinceUpdate: secondsSinceLastUpdate,
+          debugTokenDecimals: tokenDecimals,
+          debugPendingCalculation: (Number(pos.staked_amount) * delta * secondsSinceLastUpdate) / tokenDecimals,
         };
       });
 
