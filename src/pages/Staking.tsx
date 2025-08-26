@@ -66,8 +66,8 @@ const Staking = () => {
 
   const calculateAPR = (reward_rate: number, total_staked: number) => {
     if (!total_staked || total_staked === 0) return 0;
-    // APR = reward_rate * 365 * 86400 / total_staked / 1e9
-    const apr = (reward_rate * 365 * 86400) / (total_staked / 1e9);
+    // APR = reward_rate * 365 * 86400 * 100 / total_staked / 1e9
+    const apr = (reward_rate * 365 * 86400 * 100) / total_staked / 1e9;
     return apr;
   };
 
