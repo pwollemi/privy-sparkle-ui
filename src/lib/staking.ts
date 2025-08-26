@@ -94,11 +94,9 @@ export class StakingProgram {
 
   // Get the user position account PDA
   async getUserPositionPDA(userWallet: PublicKey): Promise<[PublicKey, number]> {
-    const [poolPDA] = await this.getPoolPDA();
     return await PublicKey.findProgramAddress(
       [
         Buffer.from(POSITION_SEED),
-        poolPDA.toBuffer(),
         userWallet.toBuffer(),
       ],
       STAKING_PROGRAM_ID

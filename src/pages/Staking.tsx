@@ -93,9 +93,14 @@ const Staking = () => {
       tx.recentBlockhash = blockhash;
 
       const sim = await connection.simulateTransaction(tx);
+      console.log('🔍 Full simulation result:', sim);
+      console.log('🔍 Simulation error details:', sim.value.err);
+      console.log('🔍 Program logs:', sim.value.logs);
       if (sim.value.err) {
-        console.error('❌ Simulation failed:', sim.value.err, sim.value.logs);
-        throw new Error('Transaction simulation failed. Check console for program logs.');
+        console.error('❌ Simulation failed:');
+        console.error('Error:', JSON.stringify(sim.value.err, null, 2));
+        console.error('Logs:', sim.value.logs?.join('\n'));
+        throw new Error(`Transaction simulation failed: ${JSON.stringify(sim.value.err)}`);
       }
 
       const sig = await sendTransaction(tx, connection, { minContextSlot });
