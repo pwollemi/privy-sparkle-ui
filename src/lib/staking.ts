@@ -290,10 +290,35 @@ export class StakingProgram {
   async getPoolInfo(): Promise<any> {
     try {
       const [poolPDA] = await this.getPoolPDA();
-      // TODO: Implement proper account fetching based on actual IDL structure
-      // const poolAccount = await this.program.account.pool.fetch(poolPDA);
-      // return poolAccount;
-      return null;
+      
+      // Fetch the pool account using the program
+      const poolAccount = await (this.program.account as any).pool.fetch(poolPDA);
+      
+      if (!poolAccount) {
+        console.warn('Pool account not found');
+        return null;
+      }
+
+      // Return the pool data with proper field names
+      return {
+        admin: poolAccount.admin,
+        stakeMint: poolAccount.stakeMint ?? poolAccount.stake_mint,
+        rewardRate: poolAccount.rewardRate ?? poolAccount.reward_rate,
+        accRewardPerShare: poolAccount.accRewardPerShare ?? poolAccount.acc_reward_per_share,
+        totalStaked: poolAccount.totalStaked ?? poolAccount.total_staked,
+        pendingRewards: poolAccount.pendingRewards ?? poolAccount.pending_rewards,
+        lastUpdateTime: poolAccount.lastUpdate ?? poolAccount.last_update,
+        bump: poolAccount.bump,
+        stakeVaultBump: poolAccount.stakeVaultBump ?? poolAccount.stake_vault_bump,
+        rewardVaultBump: poolAccount.rewardVaultBump ?? poolAccount.reward_vault_bump,
+        
+        // Legacy field names for compatibility
+        acc_reward_per_share: poolAccount.accRewardPerShare ?? poolAccount.acc_reward_per_share,
+        total_staked: poolAccount.totalStaked ?? poolAccount.total_staked,
+        reward_rate: poolAccount.rewardRate ?? poolAccount.reward_rate,
+        last_update_time: poolAccount.lastUpdate ?? poolAccount.last_update,
+        last_update: poolAccount.lastUpdate ?? poolAccount.last_update,
+      };
     } catch (error) {
       console.error('Error fetching pool info:', error);
       return null;
