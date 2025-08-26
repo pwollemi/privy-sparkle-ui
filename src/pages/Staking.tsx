@@ -42,6 +42,14 @@ const Staking = () => {
     return num.toFixed(6);
   };
 
+  const formatCurrency = (num: number) => {
+    if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+    if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+    if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
+    // For currency, show no decimals if it's a whole number, otherwise up to 2 decimals
+    return num % 1 === 0 ? num.toString() : num.toFixed(2);
+  };
+
   const formatTokenAmount = (amount: number) => {
     return amount.toLocaleString(undefined, { maximumFractionDigits: 6 });
   };
@@ -300,7 +308,7 @@ const Staking = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              {stakingLoading ? '...' : `$${formatNumber(totalStaked)}`}
+              {stakingLoading ? '...' : `$${formatCurrency(totalStaked)}`}
             </div>
             <p className="text-xs text-muted-foreground">
               Across {stakedPositions.length} positions
