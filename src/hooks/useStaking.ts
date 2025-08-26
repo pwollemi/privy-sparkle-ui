@@ -139,8 +139,9 @@ export const useStaking = (): UseStakingReturn => {
       const rewardOwedOnChain = Number(onChainPosition?.rewardOwed ?? onChainPosition?.reward_owed ?? 0);
 
       const stakingPositions: StakingPosition[] = (positions || []).map(pos => {
-        // Mock position data - in production, this would come from on-chain program
-        const positionRewardPerSharePaid = 1000000000; // Mock value
+        // Use on-chain position amount instead of database staked_amount
+        const onChainAmount = Number(onChainPosition?.amount ?? pos.staked_amount);
+        const positionRewardPerSharePaid = Number(onChainPosition?.rewardPerSharePaid ?? onChainPosition?.reward_per_share_paid ?? 1000000000);
         
         // Current timestamp and time since pool last update
         const currentTimestamp = Math.floor(Date.now() / 1000);
@@ -152,7 +153,7 @@ export const useStaking = (): UseStakingReturn => {
         
         // Updated pending rewards formula:
         // reward_owed + amount * Delta * (currenttimestamp - pool.last_update) / Token.Decimal
-        const pending = rewardOwedOnChain + (Number(pos.staked_amount) * delta * secondsSinceLastUpdate) / tokenDecimals;
+        const pending = rewardOwedOnChain + (onChainAmount * delta * secondsSinceLastUpdate) / tokenDecimals;
 
         // Calculate APR using the same formula as Staking page
         const calculatedAPR = poolData.total_staked > 0 
@@ -163,21 +164,21 @@ export const useStaking = (): UseStakingReturn => {
           tokenMint: pos.token_mint,
           tokenSymbol: pos.token_symbol,
           tokenName: pos.token_name,
-          stakedAmount: Number(pos.staked_amount),
+          stakedAmount: onChainAmount, // Use on-chain amount
           pendingRewards: pending,
           apy: calculatedAPR,
           lockPeriod: pos.lock_period,
           lockProgress: Number(pos.lock_progress),
           stakeDate: new Date(pos.stake_date),
           // Debug values
-          debugAmount: Number(pos.staked_amount),
+          debugAmount: onChainAmount, // Use on-chain amount for debug
           debugAccRewardPerShare: poolData.acc_reward_per_share,
           debugRewardPerSharePaid: positionRewardPerSharePaid,
           debugDelta: delta,
           debugRewardOwed: rewardOwedOnChain,
           debugTimeSinceUpdate: secondsSinceLastUpdate,
           debugTokenDecimals: tokenDecimals,
-          debugPendingCalculation: (Number(pos.staked_amount) * delta * secondsSinceLastUpdate) / tokenDecimals,
+          debugPendingCalculation: (onChainAmount * delta * secondsSinceLastUpdate) / tokenDecimals,
           debugPoolLastUpdate: poolData.last_update,
           debugCurrentTimestamp: currentTimestamp,
         };

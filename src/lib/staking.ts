@@ -330,7 +330,23 @@ export class StakingProgram {
     try {
       const [positionPDA] = await this.getUserPositionPDA(userWallet);
       const positionAccount = await (this.program.account as any).position.fetch(positionPDA);
-      return positionAccount;
+      
+      if (!positionAccount) {
+        console.warn('Position account not found');
+        return null;
+      }
+
+      // Return the position data with proper field names
+      return {
+        amount: positionAccount.amount,
+        rewardOwed: positionAccount.rewardOwed ?? positionAccount.reward_owed,
+        rewardPerSharePaid: positionAccount.rewardPerSharePaid ?? positionAccount.reward_per_share_paid,
+        bump: positionAccount.bump,
+        
+        // Legacy field names for compatibility
+        reward_owed: positionAccount.rewardOwed ?? positionAccount.reward_owed,
+        reward_per_share_paid: positionAccount.rewardPerSharePaid ?? positionAccount.reward_per_share_paid,
+      };
     } catch (error) {
       console.error('Error fetching user position info:', error);
       return null;
