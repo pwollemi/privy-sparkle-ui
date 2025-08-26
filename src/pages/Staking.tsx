@@ -72,6 +72,8 @@ const Staking = () => {
   };
 
   const formatAPR = (apr: number) => {
+    if (apr >= 1e6) return (apr / 1e6).toFixed(2) + 'M';
+    if (apr >= 1e3) return (apr / 1e3).toFixed(2) + 'K';
     return apr % 1 === 0 ? apr.toString() : apr.toFixed(2);
   };
 
@@ -344,7 +346,7 @@ const Staking = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-neon-green">
-              {stakingLoading ? '...' : `$${formatNumber(totalRewards)}`}
+              {stakingLoading ? '...' : `$${formatCurrency(totalRewards)}`}
             </div>
             <p className="text-xs text-muted-foreground">
               Available to claim
