@@ -26,15 +26,19 @@ export interface PoolData {
 export interface PositionData {
   amount: number;
   reward_per_share_paid: number;
+  reward_owed: number;
 }
 
-// Calculate pending rewards using the formula: amount * (pool.acc_reward_per_share - position.reward_per_share_paid) / PRECISION
+// Calculate pending rewards using the formula: reward_owed + amount * (pool.acc_reward_per_share - position.reward_per_share_paid) / PRECISION
 export const calculatePendingRewards = (
   amount: number,
   poolAccRewardPerShare: number,
-  positionRewardPerSharePaid: number
+  positionRewardPerSharePaid: number,
+  rewardOwed: number = 0
 ): number => {
-  return (amount * (poolAccRewardPerShare - positionRewardPerSharePaid)) / PRECISION;
+  const increment = (amount * (poolAccRewardPerShare - positionRewardPerSharePaid)) / PRECISION;
+  const total = rewardOwed + increment;
+  return total < 0 ? 0 : total;
 };
 
 export interface UseStakingReturn {
@@ -96,7 +100,8 @@ export const useStaking = (): UseStakingReturn => {
         const calculatedPendingRewards = calculatePendingRewards(
           Number(pos.staked_amount),
           poolData.acc_reward_per_share,
-          positionRewardPerSharePaid
+          positionRewardPerSharePaid,
+          Number(pos.pending_rewards || 0)
         );
 
         // Calculate APR using the same formula as Staking page
