@@ -84,8 +84,8 @@ export const useStaking = (): UseStakingReturn => {
       // Mock pool data - in production, this would come from on-chain program
       const poolData: PoolData = {
         acc_reward_per_share: 1500000000, // Mock value
-        total_staked: 1000000,
-        reward_rate: 100000
+        total_staked: 1000000, // Total staked in tokens
+        reward_rate: 47619 // Reward rate for ~15% APR
       };
 
       const stakingPositions: StakingPosition[] = (positions || []).map(pos => {
@@ -99,13 +99,18 @@ export const useStaking = (): UseStakingReturn => {
           positionRewardPerSharePaid
         );
 
+        // Calculate APR using the same formula as Staking page
+        const calculatedAPR = poolData.total_staked > 0 
+          ? (poolData.reward_rate * 365 * 86400 * 100) / poolData.total_staked / 1e9
+          : 15; // Fallback to 15% if calculation fails
+
         return {
           tokenMint: pos.token_mint,
           tokenSymbol: pos.token_symbol,
           tokenName: pos.token_name,
           stakedAmount: Number(pos.staked_amount),
           pendingRewards: calculatedPendingRewards,
-          apy: Number(pos.apy),
+          apy: calculatedAPR,
           lockPeriod: pos.lock_period,
           lockProgress: Number(pos.lock_progress),
           stakeDate: new Date(pos.stake_date),

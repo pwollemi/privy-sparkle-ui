@@ -38,10 +38,10 @@ const Staking = () => {
 
   // Mock pool data - in real implementation, this would come from the Solana program
   useEffect(() => {
-    // Simulating pool data fetch
+    // Simulating pool data fetch with realistic values for ~15% APR
     setPoolData({
-      reward_rate: 1000000, // Example reward rate in lamports per second
-      total_staked: 5000000000000000, // Example total staked in lamports
+      reward_rate: 47619, // Reward rate in tokens per second (calculated for 15% APR)
+      total_staked: 1000000, // Total staked in tokens (1M tokens)
     });
   }, []);
 
