@@ -253,6 +253,17 @@ export class StakingProgram {
     
     try {
       const tokenProgram = await this.resolveTokenProgramId(stakeMint);
+      
+      console.log('🔧 Creating claim rewards instruction with accounts:', {
+        pool: poolPDA.toString(),
+        stakeMint: stakeMint.toString(), 
+        position: positionPDA.toString(),
+        user: userWallet.toString(),
+        userTokenAccount: userTokenAccount.toString(),
+        rewardVault: rewardVaultPDA.toString(),
+        tokenProgram: tokenProgram.toString(),
+      });
+      
       const instruction = await this.program.methods
         .claimRewards()
         .accounts({
