@@ -16,6 +16,11 @@ export interface StakingPosition {
   lockPeriod: number;
   lockProgress: number;
   stakeDate: Date;
+  // Debug values for display
+  debugAmount: number;
+  debugAccRewardPerShare: number;
+  debugRewardPerSharePaid: number;
+  debugDelta: number;
 }
 
 export interface PoolData {
@@ -126,6 +131,11 @@ export const useStaking = (): UseStakingReturn => {
           lockPeriod: pos.lock_period,
           lockProgress: Number(pos.lock_progress),
           stakeDate: new Date(pos.stake_date),
+          // Debug values
+          debugAmount: Number(pos.staked_amount),
+          debugAccRewardPerShare: poolData.acc_reward_per_share,
+          debugRewardPerSharePaid: positionRewardPerSharePaid,
+          debugDelta: poolData.acc_reward_per_share - positionRewardPerSharePaid,
         };
       });
 

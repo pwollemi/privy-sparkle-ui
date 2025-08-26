@@ -554,6 +554,29 @@ const Staking = () => {
                           </div>
                         </div>
 
+                        {/* Debug Values Section */}
+                        <div className="bg-muted/50 rounded-lg p-4 mb-4">
+                          <h4 className="font-semibold mb-3 text-sm text-muted-foreground">Debug Values</h4>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                            <div>
+                              <p className="text-muted-foreground mb-1">Amount</p>
+                              <p className="font-mono">{position.debugAmount.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground mb-1">Delta (acc - paid)</p>
+                              <p className="font-mono">{position.debugDelta.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground mb-1">Acc Reward Per Share</p>
+                              <p className="font-mono">{position.debugAccRewardPerShare.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground mb-1">Reward Per Share Paid</p>
+                              <p className="font-mono">{position.debugRewardPerSharePaid.toLocaleString()}</p>
+                            </div>
+                          </div>
+                        </div>
+
                         <div className="flex gap-2">
                           <Dialog>
                             <DialogTrigger asChild>
