@@ -589,7 +589,7 @@ const Staking = () => {
                         {/* Debug Values Section */}
                         <div className="bg-muted/50 rounded-lg p-4 mb-4">
                           <h4 className="font-semibold mb-3 text-sm text-muted-foreground">Debug Values</h4>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs mb-4">
                             <div>
                               <p className="text-muted-foreground mb-1">Amount</p>
                               <p className="font-mono">{position.debugAmount.toLocaleString()}</p>
@@ -605,6 +605,18 @@ const Staking = () => {
                             <div>
                               <p className="text-muted-foreground mb-1">Reward Per Share Paid</p>
                               <p className="font-mono">{position.debugRewardPerSharePaid.toLocaleString()}</p>
+                            </div>
+                          </div>
+                          <div className="border-t border-border/50 pt-3">
+                            <div className="grid grid-cols-2 gap-4 text-xs">
+                              <div>
+                                <p className="text-muted-foreground mb-1">User Total Staked</p>
+                                <p className="font-mono font-semibold text-primary">{totalStaked.toLocaleString()}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground mb-1">User Total Rewards</p>
+                                <p className="font-mono font-semibold text-neon-green">{totalRewards.toLocaleString()}</p>
+                              </div>
                             </div>
                           </div>
                         </div>
