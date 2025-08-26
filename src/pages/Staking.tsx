@@ -91,10 +91,32 @@ const Staking = () => {
     if (!selectedHolding?.token) return;
 
     try {
+      const walletAddress = publicKey.toString();
+      
+      // Ensure Supabase session and link profile to wallet for RLS owner checks
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          console.log('No Supabase session, signing in anonymously...');
+          await supabase.auth.signInAnonymously();
+        }
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase
+            .from('profiles')
+            .upsert(
+              { user_id: user.id, wallet_address: walletAddress },
+              { onConflict: 'user_id' }
+            );
+        }
+      } catch (authErr) {
+        console.warn('Supabase auth/profile setup failed:', authErr);
+      }
+
       const { error } = await supabase
         .from('staking_positions')
         .upsert({
-          user_wallet: publicKey.toString(),
+          user_wallet: walletAddress,
           token_mint: tokenMint,
           token_symbol: selectedHolding.token.symbol,
           token_name: selectedHolding.token.name,
