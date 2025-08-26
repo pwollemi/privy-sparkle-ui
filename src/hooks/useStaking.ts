@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { supabase } from '@/integrations/supabase/client';
 
+// Precision constant for reward calculations
+const PRECISION = 1e9;
+
 export interface StakingPosition {
   tokenMint: string;
   tokenSymbol: string;
@@ -13,6 +16,26 @@ export interface StakingPosition {
   lockProgress: number;
   stakeDate: Date;
 }
+
+export interface PoolData {
+  acc_reward_per_share: number;
+  total_staked: number;
+  reward_rate: number;
+}
+
+export interface PositionData {
+  amount: number;
+  reward_per_share_paid: number;
+}
+
+// Calculate pending rewards using the formula: amount * (pool.acc_reward_per_share - position.reward_per_share_paid) / PRECISION
+export const calculatePendingRewards = (
+  amount: number,
+  poolAccRewardPerShare: number,
+  positionRewardPerSharePaid: number
+): number => {
+  return (amount * (poolAccRewardPerShare - positionRewardPerSharePaid)) / PRECISION;
+};
 
 export interface UseStakingReturn {
   stakedPositions: StakingPosition[];
@@ -58,17 +81,36 @@ export const useStaking = (): UseStakingReturn => {
         throw new Error(`Failed to fetch staking positions: ${fetchError.message}`);
       }
 
-      const stakingPositions: StakingPosition[] = (positions || []).map(pos => ({
-        tokenMint: pos.token_mint,
-        tokenSymbol: pos.token_symbol,
-        tokenName: pos.token_name,
-        stakedAmount: Number(pos.staked_amount),
-        pendingRewards: Number(pos.pending_rewards),
-        apy: Number(pos.apy),
-        lockPeriod: pos.lock_period,
-        lockProgress: Number(pos.lock_progress),
-        stakeDate: new Date(pos.stake_date),
-      }));
+      // Mock pool data - in production, this would come from on-chain program
+      const poolData: PoolData = {
+        acc_reward_per_share: 1500000000, // Mock value
+        total_staked: 1000000,
+        reward_rate: 100000
+      };
+
+      const stakingPositions: StakingPosition[] = (positions || []).map(pos => {
+        // Mock position data - in production, this would come from on-chain program
+        const positionRewardPerSharePaid = 1000000000; // Mock value
+        
+        // Calculate pending rewards using the on-chain formula
+        const calculatedPendingRewards = calculatePendingRewards(
+          Number(pos.staked_amount),
+          poolData.acc_reward_per_share,
+          positionRewardPerSharePaid
+        );
+
+        return {
+          tokenMint: pos.token_mint,
+          tokenSymbol: pos.token_symbol,
+          tokenName: pos.token_name,
+          stakedAmount: Number(pos.staked_amount),
+          pendingRewards: calculatedPendingRewards,
+          apy: Number(pos.apy),
+          lockPeriod: pos.lock_period,
+          lockProgress: Number(pos.lock_progress),
+          stakeDate: new Date(pos.stake_date),
+        };
+      });
 
       setStakedPositions(stakingPositions);
       
