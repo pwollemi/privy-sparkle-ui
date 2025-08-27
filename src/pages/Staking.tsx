@@ -93,22 +93,24 @@ const Staking = () => {
     try {
       const walletAddress = publicKey.toString();
       
-      // Ensure user is authenticated for RLS
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Please sign in to stake tokens');
-      }
-
-      // Link profile to wallet for RLS owner checks
+      // Ensure Supabase session and link profile to wallet for RLS owner checks
       try {
-        await supabase
-          .from('profiles')
-          .upsert(
-            { user_id: session.user.id, wallet_address: walletAddress },
-            { onConflict: 'user_id' }
-          );
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          console.log('No Supabase session, signing in anonymously...');
+          await supabase.auth.signInAnonymously();
+        }
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase
+            .from('profiles')
+            .upsert(
+              { user_id: user.id, wallet_address: walletAddress },
+              { onConflict: 'user_id' }
+            );
+        }
       } catch (authErr) {
-        console.warn('Profile setup failed:', authErr);
+        console.warn('Supabase auth/profile setup failed:', authErr);
       }
 
       const { error } = await supabase
