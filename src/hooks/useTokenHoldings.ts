@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
+import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface TokenHolding {
@@ -23,6 +25,7 @@ export interface UseTokenHoldingsReturn {
 
 export const useTokenHoldings = (): UseTokenHoldingsReturn => {
   const { publicKey, connected } = useWallet();
+  const { connection } = useConnection();
   const [holdings, setHoldings] = useState<TokenHolding[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,33 +44,41 @@ export const useTokenHoldings = (): UseTokenHoldingsReturn => {
     try {
       const walletAddress = publicKey.toString();
       console.log('Fetching holdings for wallet:', walletAddress);
-      
-      // Get token balances
-      const { data: balancesData, error: balancesError } = await supabase
-        .from('token_balances')
-        .select('token_mint, balance, last_updated')
-        .eq('user_wallet', walletAddress)
-        .gt('balance', 0);
 
-      if (balancesError) {
-        console.error('Error fetching token balances:', balancesError);
-        setError('Failed to fetch token balances');
+      // Fetch all SPL token accounts (Token and Token-2022) from-chain
+      const [standardTokens, token2022Tokens] = await Promise.all([
+        connection.getParsedTokenAccountsByOwner(publicKey, { programId: TOKEN_PROGRAM_ID }),
+        connection.getParsedTokenAccountsByOwner(publicKey, { programId: TOKEN_2022_PROGRAM_ID }),
+      ]);
+
+      const allAccounts = [...standardTokens.value, ...token2022Tokens.value];
+      console.log('Found token accounts:', allAccounts.length);
+
+      // Aggregate balances by mint
+      const balancesMap = new Map<string, number>();
+      for (const acc of allAccounts) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const parsed: any = acc.account.data.parsed;
+          const info = parsed?.info;
+          const mint: string | undefined = info?.mint;
+          const uiAmount: number = Number(info?.tokenAmount?.uiAmount ?? 0);
+          if (!mint || !uiAmount || uiAmount <= 0) continue;
+          balancesMap.set(mint, (balancesMap.get(mint) ?? 0) + uiAmount);
+        } catch (e) {
+          console.warn('Failed to parse token account', e);
+        }
+      }
+
+      const tokenMints = Array.from(balancesMap.keys());
+      console.log('Mints with balance > 0:', tokenMints);
+
+      if (tokenMints.length === 0) {
         setHoldings([]);
         return;
       }
 
-      console.log('Token balances data:', balancesData);
-
-      if (!balancesData || balancesData.length === 0) {
-        setHoldings([]);
-        return;
-      }
-
-      // Get token mints from balances
-      const tokenMints = balancesData.map(b => b.token_mint);
-      console.log('Token mints to fetch:', tokenMints);
-
-      // Get token details for these mints
+      // Fetch metadata for these mints from public tokens table (publicly readable)
       const { data: tokensData, error: tokensError } = await supabase
         .from('tokens')
         .select('base_mint, name, symbol, image_url')
@@ -75,27 +86,23 @@ export const useTokenHoldings = (): UseTokenHoldingsReturn => {
 
       if (tokensError) {
         console.error('Error fetching token details:', tokensError);
-        setError('Failed to fetch token details');
-        setHoldings([]);
-        return;
       }
 
-      console.log('Tokens data:', tokensData);
-
-      // Combine the data
-      const transformedData: TokenHolding[] = balancesData.map(balance => {
-        const tokenInfo = tokensData?.find(token => token.base_mint === balance.token_mint);
-        console.log(`Matching token for ${balance.token_mint}:`, tokenInfo);
+      const nowIso = new Date().toISOString();
+      const transformedData: TokenHolding[] = tokenMints.map((mint) => {
+        const tokenInfo = tokensData?.find((t) => t.base_mint === mint) ?? null;
         return {
-          token_mint: balance.token_mint,
-          balance: Number(balance.balance),
-          last_updated: balance.last_updated,
-          token: tokenInfo ? {
-            name: tokenInfo.name,
-            symbol: tokenInfo.symbol,
-            image_url: tokenInfo.image_url,
-            base_mint: tokenInfo.base_mint
-          } : null
+          token_mint: mint,
+          balance: Number(balancesMap.get(mint) ?? 0),
+          last_updated: nowIso,
+          token: tokenInfo
+            ? {
+                name: tokenInfo.name,
+                symbol: tokenInfo.symbol,
+                image_url: tokenInfo.image_url,
+                base_mint: tokenInfo.base_mint,
+              }
+            : null,
         };
       });
 
@@ -118,6 +125,6 @@ export const useTokenHoldings = (): UseTokenHoldingsReturn => {
     holdings,
     isLoading,
     error,
-    refetch: fetchHoldings
+    refetch: fetchHoldings,
   };
 };

@@ -222,6 +222,10 @@ export type Database = {
         Args: { token_mint_param: string }
         Returns: number
       }
+      is_wallet_owner: {
+        Args: { wallet_address: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
