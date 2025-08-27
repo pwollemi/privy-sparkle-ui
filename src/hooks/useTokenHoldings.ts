@@ -42,26 +42,6 @@ export const useTokenHoldings = (): UseTokenHoldingsReturn => {
       const walletAddress = publicKey.toString();
       console.log('Fetching holdings for wallet:', walletAddress);
       
-      // Ensure Supabase session and link profile to wallet for RLS owner checks
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          console.log('No Supabase session, signing in anonymously...');
-          await supabase.auth.signInAnonymously();
-        }
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase
-            .from('profiles')
-            .upsert(
-              { user_id: user.id, wallet_address: walletAddress },
-              { onConflict: 'user_id' }
-            );
-        }
-      } catch (authErr) {
-        console.warn('Supabase auth/profile setup failed:', authErr);
-      }
-      
       // Get token balances
       const { data: balancesData, error: balancesError } = await supabase
         .from('token_balances')
