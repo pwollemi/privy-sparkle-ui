@@ -89,22 +89,34 @@ export const useTokenHoldings = (): UseTokenHoldingsReturn => {
       }
 
       const nowIso = new Date().toISOString();
-      const transformedData: TokenHolding[] = tokenMints.map((mint) => {
-        const tokenInfo = tokensData?.find((t) => t.base_mint === mint) ?? null;
-        return {
-          token_mint: mint,
-          balance: Number(balancesMap.get(mint) ?? 0),
-          last_updated: nowIso,
-          token: tokenInfo
-            ? {
-                name: tokenInfo.name,
-                symbol: tokenInfo.symbol,
-                image_url: tokenInfo.image_url,
-                base_mint: tokenInfo.base_mint,
-              }
-            : null,
-        };
-      });
+      
+      // Only include tokens that exist in our platform's database and have meaningful balances
+      const transformedData: TokenHolding[] = tokenMints
+        .map((mint) => {
+          const tokenInfo = tokensData?.find((t) => t.base_mint === mint) ?? null;
+          const balance = Number(balancesMap.get(mint) ?? 0);
+          
+          return {
+            token_mint: mint,
+            balance,
+            last_updated: nowIso,
+            token: tokenInfo
+              ? {
+                  name: tokenInfo.name,
+                  symbol: tokenInfo.symbol,
+                  image_url: tokenInfo.image_url,
+                  base_mint: tokenInfo.base_mint,
+                }
+              : null,
+          };
+        })
+        .filter((holding) => {
+          // Only include tokens that:
+          // 1. Exist in our platform's database (were created on this platform)
+          // 2. Have a meaningful balance (> 0.000001 to filter out dust)
+          return holding.token !== null && holding.balance > 0.000001;
+        })
+        .sort((a, b) => b.balance - a.balance); // Sort by balance descending
 
       console.log('Final transformed data:', transformedData);
       setHoldings(transformedData);
