@@ -54,6 +54,12 @@ const Header = () => {
             >
               Staking
             </button>
+            <button 
+              onClick={() => navigate('/vesting')}
+              className="text-foreground hover:text-primary transition-colors"
+            >
+              Vesting
+            </button>
           </nav>
 
           <div className="flex items-center gap-3">
