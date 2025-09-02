@@ -128,9 +128,38 @@ const Vesting = () => {
       return;
     }
 
+    const amount = parseFloat(vestAmount);
+    const selectedHolding = holdings.find(h => h.token_mint === selectedToken);
+    
+    if (!amount || amount <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid positive amount.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!selectedHolding) {
+      toast({
+        title: "Token Not Found",
+        description: "Selected token not found in your holdings.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (amount > selectedHolding.balance) {
+      toast({
+        title: "Insufficient Balance",
+        description: `You only have ${formatTokenAmount(selectedHolding.balance)} ${selectedHolding.token?.symbol} available.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       // In real implementation, this would create a vesting schedule on-chain
-      const amount = parseFloat(vestAmount);
       const startDate = new Date();
       const cliffEnd = new Date(startDate.getTime() + vestingConfig.cliffDuration * 24 * 60 * 60 * 1000);
       const endDate = new Date(startDate.getTime() + vestingConfig.duration * 24 * 60 * 60 * 1000);
@@ -367,9 +396,16 @@ const Vesting = () => {
                     <Input
                       id="vest-amount"
                       type="number"
+                      min="0"
+                      step="any"
                       placeholder="Enter amount"
                       value={vestAmount}
-                      onChange={(e) => setVestAmount(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || (parseFloat(value) >= 0)) {
+                          setVestAmount(value);
+                        }
+                      }}
                       className="w-full"
                     />
                   </div>
