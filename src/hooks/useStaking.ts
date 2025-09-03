@@ -146,12 +146,8 @@ export const useStaking = (): UseStakingReturn => {
         // Calculate delta between pool and position
         const delta = poolData.acc_reward_per_share - positionRewardPerSharePaid;
         
-        // Updated pending rewards formula with zero-delta branch
-        const isZeroDelta = delta === 0;
-        const calcPart = isZeroDelta
-          ? (poolData.acc_reward_per_share * secondsSinceLastUpdate) / tokenDecimals
-          : (onChainAmount * delta * secondsSinceLastUpdate) / tokenDecimals;
-        const pending = rewardOwedOnChain + calcPart;
+        // Simple pending rewards formula: reward_owed + (time_since_update * reward_rate)
+        const pending = rewardOwedOnChain + (secondsSinceLastUpdate * poolData.reward_rate);
 
         // Calculate APR using the same formula as Staking page
         const calculatedAPR = poolData.total_staked > 0 
@@ -176,10 +172,10 @@ export const useStaking = (): UseStakingReturn => {
           debugRewardOwed: rewardOwedOnChain,
           debugTimeSinceUpdate: secondsSinceLastUpdate,
           debugTokenDecimals: tokenDecimals,
-          debugPendingCalculation: calcPart,
+          debugPendingCalculation: secondsSinceLastUpdate * poolData.reward_rate,
           debugPoolLastUpdate: poolData.last_update,
           debugCurrentTimestamp: currentTimestamp,
-          debugIsZeroDelta: isZeroDelta,
+          debugIsZeroDelta: false,
         };
       });
 
