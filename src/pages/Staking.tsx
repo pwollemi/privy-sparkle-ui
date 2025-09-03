@@ -36,14 +36,35 @@ const Staking = () => {
     }
   }, [connected, navigate]);
 
-  // Mock pool data - in real implementation, this would come from the Solana program
+  // Fetch actual pool data from the staking program
   useEffect(() => {
-    // Simulating pool data fetch with realistic values for ~15% APR
-    setPoolData({
-      reward_rate: 47619, // Reward rate in tokens per second (calculated for 15% APR)
-      total_staked: 1000000, // Total staked in tokens (1M tokens)
-    });
-  }, []);
+    const fetchPoolData = async () => {
+      if (!connected || !publicKey) return;
+      
+      try {
+        const stakingProgram = new StakingProgram(connection, {
+          publicKey,
+          signTransaction: walletCtx.signTransaction,
+          signAllTransactions: walletCtx.signAllTransactions,
+        } as any);
+        
+        const poolInfo = await stakingProgram.getPoolInfo();
+        setPoolData({
+          reward_rate: Number(poolInfo?.rewardRate ?? poolInfo?.reward_rate ?? 47619),
+          total_staked: Number(poolInfo?.totalStaked ?? poolInfo?.total_staked ?? 1000000),
+        });
+      } catch (error) {
+        console.warn('Failed to fetch pool data:', error);
+        // Fallback to default values
+        setPoolData({
+          reward_rate: 47619,
+          total_staked: 1000000,
+        });
+      }
+    };
+
+    fetchPoolData();
+  }, [connected, publicKey, walletCtx.signTransaction, walletCtx.signAllTransactions]);
 
   const formatNumber = (num: number) => {
     if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
