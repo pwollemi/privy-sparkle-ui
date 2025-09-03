@@ -622,10 +622,10 @@ const Staking = () => {
                                 <p className="text-muted-foreground mb-1">Time Since Update (s)</p>
                                 <p className="font-mono">{position.debugTimeSinceUpdate.toLocaleString()}</p>
                               </div>
-                              <div>
-                                <p className="text-muted-foreground mb-1">Token Decimals</p>
-                                <p className="font-mono">{position.debugTokenDecimals.toLocaleString()}</p>
-                              </div>
+                            <div>
+                              <p className="text-muted-foreground mb-1">Reward Rate</p>
+                              <p className="font-mono">{poolData?.reward_rate.toLocaleString() || 'N/A'}</p>
+                            </div>
                               <div>
                                 <p className="text-muted-foreground mb-1">Calculated Part</p>
                                 <p className="font-mono">{position.debugPendingCalculation.toLocaleString()}</p>
