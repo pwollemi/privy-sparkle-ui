@@ -168,8 +168,8 @@ export const useStaking = (): UseStakingReturn => {
           tokenMint: pos.token_mint,
           tokenSymbol: pos.token_symbol,
           tokenName: pos.token_name,
-          stakedAmount: onChainAmount, // Use on-chain amount
-          pendingRewards: pending,
+          stakedAmount: onChainAmount / 1e6, // Convert from raw amount using 6 decimals
+          pendingRewards: pending / 1e6, // Convert from raw amount using 6 decimals
           apy: calculatedAPR,
           lockPeriod: pos.lock_period,
           lockProgress: Number(pos.lock_progress),

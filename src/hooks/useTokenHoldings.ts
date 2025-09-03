@@ -62,7 +62,9 @@ export const useTokenHoldings = (): UseTokenHoldingsReturn => {
           const parsed: any = acc.account.data.parsed;
           const info = parsed?.info;
           const mint: string | undefined = info?.mint;
-          const uiAmount: number = Number(info?.tokenAmount?.uiAmount ?? 0);
+          const rawAmount: number = Number(info?.tokenAmount?.amount ?? 0);
+          const decimals: number = Number(info?.tokenAmount?.decimals ?? 6);
+          const uiAmount: number = rawAmount / Math.pow(10, decimals);
           if (!mint || !uiAmount || uiAmount <= 0) continue;
           balancesMap.set(mint, (balancesMap.get(mint) ?? 0) + uiAmount);
         } catch (e) {
