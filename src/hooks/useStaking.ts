@@ -117,24 +117,18 @@ export const useStaking = (): UseStakingReturn => {
         const poolInfo = await stakingProgram.getPoolInfo();
         onChainPosition = publicKey ? await stakingProgram.getUserPositionInfo(publicKey) : null;
         
+        const toNum = (v: any) => (v && typeof v === 'object' && 'toNumber' in v ? v.toNumber() : Number(v));
+        
         poolData = {
-          acc_reward_per_share: Number(poolInfo?.accRewardPerShare ?? poolInfo?.acc_reward_per_share ?? 1500000000),
-          total_staked: Number(poolInfo?.totalStaked ?? poolInfo?.total_staked ?? 1000000),
-          reward_rate: Number(poolInfo?.rewardRate ?? poolInfo?.reward_rate ?? 47619),
-          last_update: Number(poolInfo?.lastUpdateTime ?? poolInfo?.last_update_time ?? Math.floor(Date.now() / 1000)),
-          token_decimals: 1e6, // 1,000,000 decimals as specified
+          acc_reward_per_share: toNum(poolInfo?.accRewardPerShare ?? poolInfo?.acc_reward_per_share),
+          total_staked: toNum(poolInfo?.totalStaked ?? poolInfo?.total_staked),
+          reward_rate: toNum(poolInfo?.rewardRate ?? poolInfo?.reward_rate),
+          last_update: toNum(poolInfo?.lastUpdateTime ?? poolInfo?.last_update_time ?? poolInfo?.last_update),
+          token_decimals: 1e6, // 6 decimals as specified
         };
       } catch (error) {
-        console.warn('Failed to fetch pool data, using fallback values:', error);
-        // Fallback to mock data if on-chain fetch fails
-        poolData = {
-          acc_reward_per_share: 1500000000,
-          total_staked: 1000000,
-          reward_rate: 47619,
-          last_update: Math.floor(Date.now() / 1000) - 60, // 60s ago as fallback
-          token_decimals: 1e6, // 1,000,000 decimals as specified
-        };
-        onChainPosition = publicKey ? await stakingProgram.getUserPositionInfo(publicKey).catch(() => null) : null;
+        console.warn('Failed to fetch pool data:', error);
+        throw error;
       }
 
       const rewardOwedOnChain = Number(onChainPosition?.rewardOwed ?? onChainPosition?.reward_owed ?? 0);

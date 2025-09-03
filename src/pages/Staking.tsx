@@ -49,17 +49,21 @@ const Staking = () => {
         } as any);
         
         const poolInfo = await stakingProgram.getPoolInfo();
-        setPoolData({
-          reward_rate: Number(poolInfo?.rewardRate ?? poolInfo?.reward_rate ?? 47619),
-          total_staked: Number(poolInfo?.totalStaked ?? poolInfo?.total_staked ?? 1000000),
-        });
+        const toNum = (v: any) => (v && typeof v === 'object' && 'toNumber' in v ? v.toNumber() : Number(v));
+        const rewardRateVal = poolInfo ? (poolInfo.rewardRate ?? (poolInfo as any).reward_rate) : null;
+        const totalStakedVal = poolInfo ? (poolInfo.totalStaked ?? (poolInfo as any).total_staked) : null;
+        setPoolData(
+          rewardRateVal != null && totalStakedVal != null
+            ? {
+                reward_rate: toNum(rewardRateVal),
+                total_staked: toNum(totalStakedVal),
+              }
+            : null
+        );
       } catch (error) {
         console.warn('Failed to fetch pool data:', error);
-        // Fallback to default values
-        setPoolData({
-          reward_rate: 47619,
-          total_staked: 1000000,
-        });
+        // Do not use mock data
+        setPoolData(null);
       }
     };
 
