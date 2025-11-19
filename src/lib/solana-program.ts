@@ -121,16 +121,30 @@ export const useSolanaProgram = () => {
         poolDetails,
       };
     } catch (error: any) {
-      console.error('❌ Error creating token pool:', error);
+      console.error('❌ Full error object:', error);
+      console.error('❌ Error name:', error?.name);
+      console.error('❌ Error message:', error?.message);
+      console.error('❌ Error code:', error?.code);
+      console.error('❌ Error error:', error?.error);
+      
+      // Log all error properties
+      if (error) {
+        console.error('❌ All error keys:', Object.keys(error));
+        for (const key of Object.keys(error)) {
+          console.error(`❌ error.${key}:`, error[key]);
+        }
+      }
       
       // Extract detailed error information
       let errorMessage = 'Unknown error occurred';
       
       if (error instanceof Error) {
         errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
       }
       
-      // Check for nested wallet errors
+      // Check for nested error objects
       if (error?.error) {
         if (typeof error.error === 'string') {
           errorMessage = error.error;
@@ -138,9 +152,17 @@ export const useSolanaProgram = () => {
           errorMessage = error.error.message;
         }
         
+        // Log nested error details
+        console.error('❌ Nested error:', error.error);
+        
         // Check for error code
         if (error.error.code) {
           errorMessage += ` (Code: ${error.error.code})`;
+        }
+        
+        // Check for data
+        if (error.error.data) {
+          console.error('❌ Error data:', error.error.data);
         }
       }
       
@@ -150,8 +172,13 @@ export const useSolanaProgram = () => {
         errorMessage += '\n\nTransaction logs:\n' + error.logs.join('\n');
       }
       
+      // Check for direct code property
+      if (error?.code) {
+        errorMessage += ` (Code: ${error.code})`;
+      }
+      
       // User-friendly error messages
-      if (errorMessage.includes('User rejected')) {
+      if (errorMessage.includes('User rejected') || errorMessage.includes('user rejected')) {
         throw new Error('Transaction was rejected in your wallet. Please approve the transaction to create the token.');
       }
       
@@ -161,6 +188,10 @@ export const useSolanaProgram = () => {
       
       if (errorMessage.includes('Blockhash not found')) {
         throw new Error('Transaction expired. Please try again.');
+      }
+      
+      if (errorMessage.includes('Invalid account discriminator')) {
+        throw new Error('Invalid config account. Please create a valid config first using the config creation tool.');
       }
       
       throw new Error(`Failed to create token pool: ${errorMessage}`);
