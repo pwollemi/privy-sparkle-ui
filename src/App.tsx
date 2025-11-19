@@ -16,13 +16,14 @@ import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import { SolflareWalletAdapter } from "@solana/wallet-adapter-solflare";
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
-import React from "react";
+import { useMemo } from "react";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
-const queryClient = new QueryClient();
+const App = () => {
+  const queryClient = useMemo(() => new QueryClient(), []);
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
+  return (
+    <QueryClientProvider client={queryClient}>
     <ConnectionProvider endpoint="https://api.devnet.solana.com">
       <WalletProvider wallets={[new PhantomWalletAdapter(), new SolflareWalletAdapter({ network: WalletAdapterNetwork.Devnet })]} autoConnect>
         <WalletModalProvider>
@@ -49,6 +50,7 @@ const App = () => (
       </WalletProvider>
     </ConnectionProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
