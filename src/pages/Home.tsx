@@ -128,7 +128,7 @@ const Home = () => {
               <div className="text-muted-foreground">Tokens Launched</div>
             </div>
             <div className="bg-card/50 p-6 rounded-lg border border-border backdrop-blur-sm">
-              <div className="text-3xl font-bold text-secondary mb-2">
+              <div className="text-3xl font-bold text-primary mb-2">
                 {totalVolume > 0 && solPrice > 0 
                   ? `$${((totalVolume * solPrice) / 1000000).toFixed(1)}M` 
                   : '$0.0M'
