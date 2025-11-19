@@ -43,28 +43,22 @@ const Header = () => {
               Marketplace
             </button>
             <button 
+              onClick={() => navigate('/claim-brand')}
+              className="text-foreground hover:text-primary transition-colors"
+            >
+              Claim Brand
+            </button>
+            <button 
+              onClick={() => navigate('/all-brands')}
+              className="text-foreground hover:text-primary transition-colors"
+            >
+              All Brands
+            </button>
+            <button 
               onClick={() => navigate('/create')}
               className="text-foreground hover:text-primary transition-colors"
             >
               Create Token
-            </button>
-            <button 
-              onClick={() => navigate('/portfolio')}
-              className="text-foreground hover:text-primary transition-colors"
-            >
-              Portfolio
-            </button>
-            <button 
-              onClick={() => navigate('/staking')}
-              className="text-foreground hover:text-primary transition-colors"
-            >
-              Staking
-            </button>
-            <button 
-              onClick={() => navigate('/vesting')}
-              className="text-foreground hover:text-primary transition-colors"
-            >
-              Vesting
             </button>
           </nav>
 
