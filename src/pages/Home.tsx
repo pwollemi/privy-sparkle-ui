@@ -233,7 +233,7 @@ const Home = () => {
                 className="pl-10 bg-background"
               />
             </div>
-            <select className="px-4 py-2 rounded-md border border-input bg-background text-foreground">
+            <select className="md:w-1/3 px-4 py-2 rounded-md border border-input bg-background text-foreground">
               <option>All Industries</option>
               <option>Finance</option>
               <option>Technology</option>
@@ -241,7 +241,7 @@ const Home = () => {
               <option>Retail</option>
               <option>Food</option>
             </select>
-            <select className="px-4 py-2 rounded-md border border-input bg-background text-foreground">
+            <select className="md:w-1/3 px-4 py-2 rounded-md border border-input bg-background text-foreground">
               <option>Market Cap</option>
               <option>Price: Low to High</option>
               <option>Price: High to Low</option>
