@@ -209,38 +209,58 @@ const Home = () => {
       </section>
 
       {/* Token Discovery Section */}
-      <section id="discover" className="py-16 px-4">
+      <section id="discover" className="py-16 px-4 bg-background">
         <div className="container mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Discover <span className="gradient-text">Trending Tokens</span>
-            </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Find the next 1000x gem before it moons. Early birds get the biggest gains!
-            </p>
-          </div>
-
-          <div className="relative max-w-md mx-auto mb-8">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search tokens..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-card/50 backdrop-blur-sm border-border focus:border-primary"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {cards.map((token) => (
-              <TokenCard key={token.id} token={token} />
-            ))}
-          </div>
-
-          {cards.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground text-lg">No tokens found matching your search.</p>
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+              <TrendingUp className="h-7 w-7 text-white" />
             </div>
-          )}
+            <div>
+              <h2 className="text-4xl font-bold">Token Marketplace</h2>
+              <p className="text-lg text-muted-foreground">Discover and trade tokens from verified businesses</p>
+            </div>
+          </div>
+          
+          {/* Search and Filters */}
+          <div className="flex flex-col md:flex-row gap-4 mb-8">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search tokens..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-background"
+              />
+            </div>
+            <select className="px-4 py-2 rounded-md border border-input bg-background text-foreground">
+              <option>All Industries</option>
+              <option>Finance</option>
+              <option>Technology</option>
+              <option>Healthcare</option>
+              <option>Retail</option>
+              <option>Food</option>
+            </select>
+            <select className="px-4 py-2 rounded-md border border-input bg-background text-foreground">
+              <option>Market Cap</option>
+              <option>Price: Low to High</option>
+              <option>Price: High to Low</option>
+              <option>Volume: High to Low</option>
+            </select>
+          </div>
+
+          {/* Token Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {cards.length > 0 ? (
+              cards.map((token) => (
+                <TokenCard key={token.id} token={token} />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <p className="text-muted-foreground">No tokens found. Be the first to create one!</p>
+              </div>
+            )}
+          </div>
         </div>
       </section>
     </div>

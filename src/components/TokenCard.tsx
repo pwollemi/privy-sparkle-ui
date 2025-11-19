@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { TrendingUp, TrendingDown, Users, Clock } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { TrendingUp, TrendingDown, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface TokenCardProps {
@@ -14,6 +14,7 @@ interface TokenCardProps {
     price: number;
     change24h: number;
     marketCap: number;
+    volume24h?: number;
     holders: number;
     createdAt: string;
     creator: string;
@@ -25,84 +26,71 @@ const TokenCard: React.FC<TokenCardProps> = ({ token }) => {
   const isPositive = token.change24h >= 0;
 
   const formatPrice = (price: number) => {
-    if (price === 0) return '0.00';
-    if (price < 0.000001) return '< 0.000001';
-    if (price < 0.01) return price.toFixed(6);
-    return price.toFixed(4);
+    if (price === 0) return '$0.00';
+    if (price < 0.01) return `$${price.toFixed(4)}`;
+    return `$${price.toFixed(2)}`;
   };
 
-  const formatMarketCap = (cap: number) => {
-    if (cap >= 1000000) return `$${(cap / 1000000).toFixed(1)}M`;
-    if (cap >= 1000) return `$${(cap / 1000).toFixed(1)}K`;
-    return `$${cap.toFixed(0)}`;
+  const formatValue = (val: number) => {
+    if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
+    if (val >= 1000) return `$${(val / 1000).toFixed(1)}K`;
+    return `$${val.toFixed(0)}`;
+  };
+
+  const getIndustry = (name: string) => {
+    if (name.toLowerCase().includes('finance') || name.toLowerCase().includes('hub')) return 'Finance';
+    if (name.toLowerCase().includes('energy') || name.toLowerCase().includes('green')) return 'Technology';
+    if (name.toLowerCase().includes('tech') || name.toLowerCase().includes('corp')) return 'Technology';
+    if (name.toLowerCase().includes('health') || name.toLowerCase().includes('medical')) return 'Healthcare';
+    if (name.toLowerCase().includes('retail') || name.toLowerCase().includes('mart')) return 'Retail';
+    if (name.toLowerCase().includes('food') || name.toLowerCase().includes('chain')) return 'Food';
+    return 'Technology';
   };
 
   return (
     <Card 
-      className="bg-gradient-card border-border hover:border-primary/50 transition-all duration-300 cursor-pointer group hover:shadow-neon-primary/20"
+      className="bg-card border-border hover:border-primary/30 transition-all duration-200 cursor-pointer"
       onClick={() => navigate(`/token/${token.id}`)}
     >
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3 mb-3">
-          <img 
-            src={token.image} 
-            alt={token.name}
-            className="w-12 h-12 rounded-full bg-muted object-cover group-hover:scale-110 transition-transform duration-300"
-          />
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground truncate">{token.name}</h3>
-            <p className="text-sm text-muted-foreground">${token.symbol}</p>
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-lg">
+              {token.symbol.charAt(0)}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-foreground">{token.name}</h3>
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+              </div>
+              <p className="text-sm text-muted-foreground">${token.symbol}</p>
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-sm font-medium text-foreground">{formatPrice(token.price)} SOL</p>
-            <div className={`flex items-center gap-1 text-xs ${
-              isPositive ? 'text-pump-success' : 'text-pump-danger'
+          <Badge variant="secondary" className="text-xs">
+            {getIndustry(token.name)}
+          </Badge>
+        </div>
+
+        <div className="mb-4">
+          <div className="flex items-end gap-2 mb-1">
+            <p className="text-3xl font-bold text-foreground">{formatPrice(token.price)}</p>
+            <div className={`flex items-center gap-1 text-sm font-medium mb-1 ${
+              isPositive ? 'text-green-600' : 'text-red-600'
             }`}>
-              {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-              {Math.abs(token.change24h).toFixed(2)}%
+              {isPositive ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+              {isPositive ? '+' : ''}{token.change24h.toFixed(1)}%
             </div>
           </div>
         </div>
 
-        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{token.description}</p>
-
-        <div className="grid grid-cols-2 gap-4 mb-4 text-xs">
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <TrendingUp className="h-3 w-3" />
-            <span>MCap: {formatMarketCap(token.marketCap)}</span>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Market Cap</p>
+            <p className="text-base font-semibold text-foreground">{formatValue(token.marketCap)}</p>
           </div>
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <Users className="h-3 w-3" />
-            <span>{token.holders} holders</span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            <span>{token.createdAt}</span>
-          </div>
-          <div className="flex gap-2">
-            <Button 
-              variant="success" 
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/token/${token.id}`);
-              }}
-            >
-              Buy
-            </Button>
-            <Button 
-              variant="danger" 
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/token/${token.id}`);
-              }}
-            >
-              Sell
-            </Button>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">24h Volume</p>
+            <p className="text-base font-semibold text-foreground">{formatValue(token.volume24h || token.marketCap * 0.23)}</p>
           </div>
         </div>
       </CardContent>
