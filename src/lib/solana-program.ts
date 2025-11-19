@@ -48,26 +48,15 @@ export const useSolanaProgram = () => {
     try {
       console.log('🚀 Starting token pool creation...');
       
-      // Check wallet balance first
-      const balance = await connection.getBalance(publicKey);
-      const balanceSOL = balance / LAMPORTS_PER_SOL;
-      console.log('💰 Wallet balance:', balanceSOL, 'SOL');
-      
-      if (balanceSOL < 0.1) {
-        throw new Error(`Insufficient SOL balance. You have ${balanceSOL.toFixed(4)} SOL but need at least 0.1 SOL for transaction fees and rent.`);
-      }
-      
       const client = new DynamicBondingCurveClient(connection, 'confirmed');
       
-      // Use a pre-created config key
-      // TODO: You should create a config once using client.partner.createConfig() 
-      // and save the config address for reuse
+      // Use your pre-created config key
+      // Replace this with your actual config address from createConfig
       const configKey = new PublicKey('Fcu8wTpiFLfxPDUNSK7kbEKYKqcdWEuaNQHegyoRUygr');
-      console.log('📋 Using config:', configKey.toBase58());
-
+      
       // Generate base mint keypair for the new token
       const baseMintKeypair = Keypair.generate();
-      console.log('🔑 Generated base mint:', baseMintKeypair.publicKey.toBase58());
+      console.log('🔑 baseMintKeypair:', baseMintKeypair.publicKey.toBase58());
 
       // Create pool transaction
       console.log('🔨 Building createPool transaction...');
@@ -81,7 +70,7 @@ export const useSolanaProgram = () => {
         baseMint: baseMintKeypair.publicKey,
       });
 
-      // Get blockhash and prepare transaction
+      // Get blockhash
       const {
         context: { slot: minContextSlot },
         value: { blockhash, lastValidBlockHeight },
@@ -91,20 +80,14 @@ export const useSolanaProgram = () => {
       transaction.recentBlockhash = blockhash;
       transaction.partialSign(baseMintKeypair);
 
-      console.log('📊 Transaction details:');
-      console.log('  - Instructions:', transaction.instructions.length);
-      console.log('  - Signers:', transaction.signatures.length);
-
       // Send transaction
-      console.log('💳 Sending transaction to wallet for approval...');
+      console.log('💳 Sending transaction...');
       const signature = await sendTransaction(transaction, connection, {
         minContextSlot,
-        skipPreflight: false,
-        preflightCommitment: 'confirmed'
       });
       
       console.log('✅ Transaction sent! Signature:', signature);
-      console.log('⏳ Confirming transaction...');
+      console.log('⏳ Confirming...');
       await connection.confirmTransaction({
         blockhash,
         lastValidBlockHeight,
