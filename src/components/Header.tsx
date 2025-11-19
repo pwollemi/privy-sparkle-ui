@@ -55,6 +55,24 @@ const Header = () => {
               All Brands
             </button>
             <button 
+              onClick={() => navigate('/portfolio')}
+              className="text-foreground hover:text-primary transition-colors"
+            >
+              Portfolio
+            </button>
+            <button 
+              onClick={() => navigate('/staking')}
+              className="text-foreground hover:text-primary transition-colors"
+            >
+              Staking
+            </button>
+            <button 
+              onClick={() => navigate('/vesting')}
+              className="text-foreground hover:text-primary transition-colors"
+            >
+              Vesting
+            </button>
+            <button 
               onClick={() => navigate('/create')}
               className="text-foreground hover:text-primary transition-colors"
             >
