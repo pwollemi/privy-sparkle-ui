@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Wallet, Plus, User, LogOut, Coins, Copy } from 'lucide-react';
+import { Wallet, User, LogOut, Coins, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { useWalletBalance } from '@/hooks/useWalletBalance';
@@ -83,16 +83,6 @@ const Header = () => {
                 </span>
               </div>
             )}
-            
-            <Button
-              variant="neon-outline"
-              size="sm"
-              onClick={() => navigate('/create')}
-              className="hidden sm:flex"
-            >
-              <Plus className="h-4 w-4" />
-              Create
-            </Button>
             
             {connected ? (
               <DropdownMenu>
