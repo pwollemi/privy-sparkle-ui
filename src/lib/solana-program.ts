@@ -2,7 +2,17 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, Keypair } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, getMint, getAccount, getAssociatedTokenAddressSync } from '@solana/spl-token';
 import programIdl from './program-idl.json';
-import { DynamicBondingCurveClient } from '@meteora-ag/dynamic-bonding-curve-sdk';
+import { 
+  DynamicBondingCurveClient, 
+  buildCurve, 
+  MigrationOption, 
+  TokenDecimal, 
+  BaseFeeMode,
+  ActivationType,
+  CollectFeeMode,
+  MigrationFeeOption,
+  TokenType
+} from '@meteora-ag/dynamic-bonding-curve-sdk';
 import BN from 'bn.js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -54,55 +64,101 @@ export const useSolanaProgram = () => {
       console.log('💰 Wallet balance:', balanceSOL, 'SOL');
       
       if (balanceSOL < 0.3) {
-        throw new Error(`Insufficient SOL balance. You have ${balanceSOL.toFixed(4)} SOL but need at least 0.3 SOL for transaction fees and rent.`);
+        throw new Error(`Insufficient SOL balance. You have ${balanceSOL.toFixed(4)} SOL but need at least 0.3 SOL for creating config and pool.`);
       }
       
       const client = new DynamicBondingCurveClient(connection, 'confirmed');
       
-      // For devnet testing, you need to create a config first through Meteora's UI or CLI
-      // This is a placeholder - replace with your actual config address
-      // To create a config, visit: https://app.meteora.ag or use the Meteora CLI
-      const configKey = new PublicKey('Fcu8wTpiFLfxPDUNSK7kbEKYKqcdWEuaNQHegyoRUygr');
+      // Step 1: Create a new config for this pool
+      console.log('🔧 Creating pool configuration...');
       
-      console.log('📋 Using config:', configKey.toBase58());
+      const totalSupply = params.initialSupply || 1_000_000_000;
       
-      // Verify config exists
-      console.log('🔍 Verifying config account...');
-      const configAccount = await connection.getAccountInfo(configKey);
-      if (!configAccount) {
-        throw new Error(
-          `Config account not found at ${configKey.toBase58()}.\n\n` +
-          `To use Meteora Dynamic Bonding Curve on devnet:\n` +
-          `1. Create a config using Meteora's UI: https://app.meteora.ag\n` +
-          `2. Or use the Meteora CLI to create a config\n` +
-          `3. Update the config address in the code\n\n` +
-          `For testing, you can also switch to mainnet where official configs exist.`
-        );
-      }
+      const curveConfig = buildCurve({
+        totalTokenSupply: totalSupply,
+        percentageSupplyOnMigration: 80, // 80% goes to bonding curve
+        migrationQuoteThreshold: 85, // Migrate at 85 SOL
+        migrationOption: MigrationOption.MET_DAMM_V2,
+        tokenBaseDecimal: TokenDecimal.SIX,
+        tokenQuoteDecimal: TokenDecimal.NINE,
+        lockedVestingParam: {
+          totalLockedVestingAmount: 0, // No vesting for simplicity
+          numberOfVestingPeriod: 0,
+          cliffUnlockAmount: 0,
+          totalVestingDuration: 0,
+          cliffDurationFromMigrationTime: 0,
+        },
+        baseFeeParams: {
+          baseFeeMode: BaseFeeMode.FeeSchedulerLinear,
+          feeSchedulerParam: {
+            startingFeeBps: 100, // 1% starting fee
+            endingFeeBps: 10, // 0.1% ending fee
+            numberOfPeriod: 10,
+            totalDuration: 3600 * 24 * 7, // 1 week
+          },
+        },
+        dynamicFeeEnabled: true,
+        activationType: ActivationType.Timestamp,
+        collectFeeMode: CollectFeeMode.QuoteToken,
+        migrationFeeOption: MigrationFeeOption.FixedBps25, // 2.5% migration fee
+        tokenType: TokenType.Token2022,
+        partnerLpPercentage: 0,
+        creatorLpPercentage: 0,
+        partnerLockedLpPercentage: 0,
+        creatorLockedLpPercentage: 0,
+        creatorTradingFeePercentage: 0,
+        leftover: totalSupply * 0.2, // 20% leftover to creator
+        tokenUpdateAuthority: 4, // Creator retains update authority
+        migrationFee: {
+          feePercentage: 0,
+          creatorFeePercentage: 0,
+        },
+      });
       
-      try {
-        const poolConfig = await client.state.getPoolConfig(configKey);
-        console.log('✅ Config verified:', poolConfig);
-      } catch (configError: any) {
-        console.error('Config validation error:', configError);
-        throw new Error(
-          `Invalid config account. The config at ${configKey.toBase58()} is not a valid Meteora pool config.\n\n` +
-          `Please create a proper config using:\n` +
-          `- Meteora's web interface: https://app.meteora.ag\n` +
-          `- Or the Meteora CLI tools\n\n` +
-          `Error: ${configError.message}`
-        );
-      }
+      // Generate a new keypair for the config account
+      const configKeypair = Keypair.generate();
+      console.log('📋 Config address:', configKeypair.publicKey.toBase58());
+      
+      const createConfigParams = {
+        config: configKeypair.publicKey,
+        feeClaimer: publicKey, // Creator claims fees
+        leftoverReceiver: publicKey, // Creator receives leftover tokens
+        quoteMint: new PublicKey('So11111111111111111111111111111111111111112'), // SOL (wrapped)
+        payer: publicKey,
+        ...curveConfig,
+      };
+      
+      console.log('📤 Creating config transaction...');
+      const configTransaction = await client.partner.createConfig(createConfigParams);
+      
+      let blockhashInfo = await connection.getLatestBlockhashAndContext();
+      configTransaction.feePayer = publicKey;
+      configTransaction.recentBlockhash = blockhashInfo.value.blockhash;
+      configTransaction.partialSign(configKeypair);
+      
+      console.log('💳 Sending config creation to wallet...');
+      const configSignature = await sendTransaction(configTransaction, connection, {
+        minContextSlot: blockhashInfo.context.slot,
+        skipPreflight: false,
+        preflightCommitment: 'confirmed'
+      });
+      
+      console.log('⏳ Confirming config creation...');
+      await connection.confirmTransaction({
+        blockhash: blockhashInfo.value.blockhash,
+        lastValidBlockHeight: blockhashInfo.value.lastValidBlockHeight,
+        signature: configSignature
+      });
+      console.log('✅ Config created successfully!');
 
-      // Mint for the new token
+      // Step 2: Create the pool using the new config
       const baseMintKeypair = Keypair.generate();
       console.log('🔑 Generated base mint:', baseMintKeypair.publicKey.toBase58());
 
-      // Build createPool transaction
       console.log('🔨 Building createPool transaction...');
-      const transaction = await client.pool.createPool({
+      const poolTransaction = await client.pool.createPool({
         baseMint: baseMintKeypair.publicKey,
-        config: configKey,
+        config: configKeypair.publicKey,
         name: params.name,
         symbol: params.symbol,
         uri: params.website || 'https://coinporate.app',
@@ -110,35 +166,32 @@ export const useSolanaProgram = () => {
         poolCreator: publicKey,
       });
 
-      console.log('⏳ Getting blockhash...');
-      const {
-        context: { slot: minContextSlot },
-        value: { blockhash, lastValidBlockHeight },
-      } = await connection.getLatestBlockhashAndContext();
+      console.log('⏳ Getting fresh blockhash...');
+      blockhashInfo = await connection.getLatestBlockhashAndContext();
 
-      transaction.feePayer = publicKey;
-      transaction.recentBlockhash = blockhash;
-      transaction.partialSign(baseMintKeypair);
+      poolTransaction.feePayer = publicKey;
+      poolTransaction.recentBlockhash = blockhashInfo.value.blockhash;
+      poolTransaction.partialSign(baseMintKeypair);
 
-      console.log('📊 Transaction details:');
-      console.log('  - Instructions:', transaction.instructions.length);
-      console.log('  - Signers:', transaction.signatures.length);
+      console.log('📊 Pool transaction details:');
+      console.log('  - Instructions:', poolTransaction.instructions.length);
+      console.log('  - Signers:', poolTransaction.signatures.length);
+
+      console.log('💳 Sending pool creation to wallet...');
       
-      // Calculate transaction size
-      const serializedTx = transaction.serialize({ requireAllSignatures: false, verifySignatures: false });
-      console.log('  - Size:', serializedTx.length, 'bytes');
-
-      console.log('💳 Sending transaction to wallet for approval...');
-      
-      const signature = await sendTransaction(transaction, connection, { 
-        minContextSlot,
+      const signature = await sendTransaction(poolTransaction, connection, { 
+        minContextSlot: blockhashInfo.context.slot,
         skipPreflight: false,
         preflightCommitment: 'confirmed'
       });
       
-      console.log('✅ Transaction sent! Signature:', signature);
-      console.log('⏳ Confirming transaction...');
-      await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature });
+      console.log('✅ Pool transaction sent! Signature:', signature);
+      console.log('⏳ Confirming pool creation...');
+      await connection.confirmTransaction({
+        blockhash: blockhashInfo.value.blockhash,
+        lastValidBlockHeight: blockhashInfo.value.lastValidBlockHeight,
+        signature
+      });
       console.log('🎉 Transaction confirmed!');
 
       // Fetch created pool by base mint
