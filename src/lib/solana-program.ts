@@ -2,7 +2,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, Keypair } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, getMint, getAccount, getAssociatedTokenAddressSync } from '@solana/spl-token';
 import programIdl from './program-idl.json';
-import { DynamicBondingCurveClient } from '@meteora-ag/dynamic-bonding-curve-sdk';
+import { DynamicBondingCurveClient, buildCurve, MigrationOption, TokenDecimal, BaseFeeMode, ActivationType, CollectFeeMode, MigrationFeeOption, TokenType } from '@meteora-ag/dynamic-bonding-curve-sdk';
 import BN from 'bn.js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -47,53 +47,113 @@ export const useSolanaProgram = () => {
 
     try {
       console.log('🚀 Starting token pool creation...');
-      
+
       const client = new DynamicBondingCurveClient(connection, 'confirmed');
-      
-      // Use your pre-created config key
-      // Replace this with your actual config address from createConfig
-      const configKey = new PublicKey('Fcu8wTpiFLfxPDUNSK7kbEKYKqcdWEuaNQHegyoRUygr');
-      
-      // Generate base mint keypair for the new token
+
+      // -------- 1) Create config (same logic as your reference code) --------
+      console.log('🔧 Building curve config...');
+      const curveConfig = buildCurve({
+        totalTokenSupply: 100000000,
+        percentageSupplyOnMigration: 10,
+        migrationQuoteThreshold: 20,
+        migrationOption: MigrationOption.MET_DAMM_V2,
+        tokenBaseDecimal: TokenDecimal.SIX,
+        tokenQuoteDecimal: TokenDecimal.NINE,
+        lockedVestingParam: {
+          totalLockedVestingAmount: 20000000,
+          numberOfVestingPeriod: 12,
+          cliffUnlockAmount: 0,
+          totalVestingDuration: 356 * 3600 * 24,
+          cliffDurationFromMigrationTime: 0,
+        },
+        baseFeeParams: {
+          baseFeeMode: BaseFeeMode.FeeSchedulerLinear,
+          feeSchedulerParam: {
+            startingFeeBps: 100,
+            endingFeeBps: 10,
+            numberOfPeriod: 1,
+            totalDuration: 100,
+          },
+        },
+        dynamicFeeEnabled: true,
+        activationType: ActivationType.Timestamp,
+        collectFeeMode: CollectFeeMode.QuoteToken,
+        migrationFeeOption: MigrationFeeOption.FixedBps25,
+        tokenType: TokenType.Token2022,
+        partnerLpPercentage: 0,
+        creatorLpPercentage: 0,
+        partnerLockedLpPercentage: 100,
+        creatorLockedLpPercentage: 0,
+        creatorTradingFeePercentage: 0,
+        leftover: 50000000,
+        tokenUpdateAuthority: 4,
+        migrationFee: {
+          feePercentage: 0,
+          creatorFeePercentage: 0,
+        },
+      });
+
+      // Generate a new keypair for the config account
+      const configKeypair = Keypair.generate();
+      console.log('📋 configKeypair:', configKeypair.publicKey.toBase58());
+
+      const createConfigParams = {
+        config: configKeypair.publicKey,
+        feeClaimer: new PublicKey('JD2zL67TrjzxkNyjzBT2vqJVqY1ZeSUtotes3LRsmb6Y'),
+        leftoverReceiver: new PublicKey('JD2zL67TrjzxkNyjzBT2vqJVqY1ZeSUtotes3LRsmb6Y'),
+        quoteMint: new PublicKey('So11111111111111111111111111111111111111112'),
+        payer: publicKey,
+        ...curveConfig,
+      };
+
+      console.log('🧱 Building createConfig transaction...');
+      const configTx = await client.partner.createConfig(createConfigParams);
+
+      let {
+        context: { slot: minContextSlot },
+        value: { blockhash, lastValidBlockHeight },
+      } = await connection.getLatestBlockhashAndContext();
+
+      configTx.feePayer = publicKey;
+      configTx.recentBlockhash = blockhash;
+      configTx.partialSign(configKeypair);
+
+      console.log('💳 Sending config transaction...');
+      const configSig = await sendTransaction(configTx, connection, { minContextSlot });
+      console.log('✅ Config tx signature:', configSig);
+
+      await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature: configSig });
+      console.log('🎉 Config created');
+
+      // -------- 2) Create pool using that config (same as your createPool) --------
       const baseMintKeypair = Keypair.generate();
       console.log('🔑 baseMintKeypair:', baseMintKeypair.publicKey.toBase58());
 
-      // Create pool transaction
-      console.log('🔨 Building createPool transaction...');
-      const transaction = await client.pool.createPool({
+      const poolTx = await client.pool.createPool({
         name: params.name,
         symbol: params.symbol,
         uri: params.website || 'https://coinporate.app',
         payer: publicKey,
         poolCreator: publicKey,
-        config: configKey,
+        config: configKeypair.publicKey,
         baseMint: baseMintKeypair.publicKey,
       });
 
-      // Get blockhash
-      const {
+      ({
         context: { slot: minContextSlot },
         value: { blockhash, lastValidBlockHeight },
-      } = await connection.getLatestBlockhashAndContext();
-      
-      transaction.feePayer = publicKey;
-      transaction.recentBlockhash = blockhash;
-      transaction.partialSign(baseMintKeypair);
+      } = await connection.getLatestBlockhashAndContext());
 
-      // Send transaction
-      console.log('💳 Sending transaction...');
-      const signature = await sendTransaction(transaction, connection, {
-        minContextSlot,
-      });
-      
-      console.log('✅ Transaction sent! Signature:', signature);
-      console.log('⏳ Confirming...');
-      await connection.confirmTransaction({
-        blockhash,
-        lastValidBlockHeight,
-        signature,
-      });
-      console.log('🎉 Transaction confirmed!');
+      poolTx.feePayer = publicKey;
+      poolTx.recentBlockhash = blockhash;
+      poolTx.partialSign(baseMintKeypair);
+
+      console.log('💳 Sending pool transaction...');
+      const signature = await sendTransaction(poolTx, connection, { minContextSlot });
+      console.log('✅ Pool tx signature:', signature);
+
+      await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature });
+      console.log('🎉 Pool created');
 
       // Fetch created pool by base mint
       const created: any = await client.state.getPoolByBaseMint(baseMintKeypair.publicKey);
@@ -121,80 +181,10 @@ export const useSolanaProgram = () => {
         poolDetails,
       };
     } catch (error: any) {
-      console.error('❌ Full error object:', error);
-      console.error('❌ Error name:', error?.name);
-      console.error('❌ Error message:', error?.message);
-      console.error('❌ Error code:', error?.code);
-      console.error('❌ Error error:', error?.error);
-      
-      // Log all error properties
-      if (error) {
-        console.error('❌ All error keys:', Object.keys(error));
-        for (const key of Object.keys(error)) {
-          console.error(`❌ error.${key}:`, error[key]);
-        }
-      }
-      
-      // Extract detailed error information
-      let errorMessage = 'Unknown error occurred';
-      
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      }
-      
-      // Check for nested error objects
-      if (error?.error) {
-        if (typeof error.error === 'string') {
-          errorMessage = error.error;
-        } else if (error.error.message) {
-          errorMessage = error.error.message;
-        }
-        
-        // Log nested error details
-        console.error('❌ Nested error:', error.error);
-        
-        // Check for error code
-        if (error.error.code) {
-          errorMessage += ` (Code: ${error.error.code})`;
-        }
-        
-        // Check for data
-        if (error.error.data) {
-          console.error('❌ Error data:', error.error.data);
-        }
-      }
-      
-      // Check for transaction simulation errors
-      if (error?.logs && Array.isArray(error.logs)) {
-        console.error('📜 Transaction logs:', error.logs);
-        errorMessage += '\n\nTransaction logs:\n' + error.logs.join('\n');
-      }
-      
-      // Check for direct code property
-      if (error?.code) {
-        errorMessage += ` (Code: ${error.code})`;
-      }
-      
-      // User-friendly error messages
-      if (errorMessage.includes('User rejected') || errorMessage.includes('user rejected')) {
-        throw new Error('Transaction was rejected in your wallet. Please approve the transaction to create the token.');
-      }
-      
-      if (errorMessage.includes('Insufficient funds') || errorMessage.includes('insufficient lamports')) {
-        throw new Error('Insufficient SOL balance. Please add more SOL to your wallet and try again.');
-      }
-      
-      if (errorMessage.includes('Blockhash not found')) {
-        throw new Error('Transaction expired. Please try again.');
-      }
-      
-      if (errorMessage.includes('Invalid account discriminator')) {
-        throw new Error('Invalid config account. Please create a valid config first using the config creation tool.');
-      }
-      
-      throw new Error(`Failed to create token pool: ${errorMessage}`);
+      console.error('❌ Error creating token pool:', error);
+      let msg = error?.message || 'Unknown error';
+      if (error?.error?.message) msg = error.error.message;
+      throw new Error(`Failed to create token pool: ${msg}`);
     }
   };
 
