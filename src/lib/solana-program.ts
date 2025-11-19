@@ -53,17 +53,46 @@ export const useSolanaProgram = () => {
       const balanceSOL = balance / LAMPORTS_PER_SOL;
       console.log('💰 Wallet balance:', balanceSOL, 'SOL');
       
-      if (balanceSOL < 0.1) {
-        throw new Error(`Insufficient SOL balance. You have ${balanceSOL.toFixed(4)} SOL but need at least 0.1 SOL for transaction fees and rent.`);
+      if (balanceSOL < 0.3) {
+        throw new Error(`Insufficient SOL balance. You have ${balanceSOL.toFixed(4)} SOL but need at least 0.3 SOL for transaction fees and rent.`);
       }
       
       const client = new DynamicBondingCurveClient(connection, 'confirmed');
       
-      // Use the official DAMM V2 config for 2.5% migration fee (FixedBps25)
-      // This is the correct config that Meteora expects
-      const configKey = new PublicKey('7F6dnUcRuyM2TwR8myT1dYypFXpPSxqwKNSFNkxyNESd');
+      // For devnet testing, you need to create a config first through Meteora's UI or CLI
+      // This is a placeholder - replace with your actual config address
+      // To create a config, visit: https://app.meteora.ag or use the Meteora CLI
+      const configKey = new PublicKey('Fcu8wTpiFLfxPDUNSK7kbEKYKqcdWEuaNQHegyoRUygr');
       
-      console.log('📋 Using DAMM V2 config (2.5% fee):', configKey.toBase58());
+      console.log('📋 Using config:', configKey.toBase58());
+      
+      // Verify config exists
+      console.log('🔍 Verifying config account...');
+      const configAccount = await connection.getAccountInfo(configKey);
+      if (!configAccount) {
+        throw new Error(
+          `Config account not found at ${configKey.toBase58()}.\n\n` +
+          `To use Meteora Dynamic Bonding Curve on devnet:\n` +
+          `1. Create a config using Meteora's UI: https://app.meteora.ag\n` +
+          `2. Or use the Meteora CLI to create a config\n` +
+          `3. Update the config address in the code\n\n` +
+          `For testing, you can also switch to mainnet where official configs exist.`
+        );
+      }
+      
+      try {
+        const poolConfig = await client.state.getPoolConfig(configKey);
+        console.log('✅ Config verified:', poolConfig);
+      } catch (configError: any) {
+        console.error('Config validation error:', configError);
+        throw new Error(
+          `Invalid config account. The config at ${configKey.toBase58()} is not a valid Meteora pool config.\n\n` +
+          `Please create a proper config using:\n` +
+          `- Meteora's web interface: https://app.meteora.ag\n` +
+          `- Or the Meteora CLI tools\n\n` +
+          `Error: ${configError.message}`
+        );
+      }
 
       // Mint for the new token
       const baseMintKeypair = Keypair.generate();
@@ -98,32 +127,13 @@ export const useSolanaProgram = () => {
       // Calculate transaction size
       const serializedTx = transaction.serialize({ requireAllSignatures: false, verifySignatures: false });
       console.log('  - Size:', serializedTx.length, 'bytes');
-      
-      if (serializedTx.length > 1232) {
-        console.warn('⚠️ Transaction size is large:', serializedTx.length, 'bytes (max: 1232)');
-      }
-
-      // Try simulating first
-      console.log('🧪 Simulating transaction...');
-      try {
-        const simulation = await connection.simulateTransaction(transaction);
-        if (simulation.value.err) {
-          console.error('❌ Simulation failed:', simulation.value.err);
-          console.error('📜 Simulation logs:', simulation.value.logs);
-          throw new Error(`Transaction simulation failed: ${JSON.stringify(simulation.value.err)}`);
-        }
-        console.log('✅ Simulation successful');
-      } catch (simError: any) {
-        console.error('❌ Simulation error:', simError);
-        throw new Error(`Failed to simulate transaction: ${simError.message}`);
-      }
 
       console.log('💳 Sending transaction to wallet for approval...');
       
       const signature = await sendTransaction(transaction, connection, { 
         minContextSlot,
-        skipPreflight: true, // Skip preflight since we already simulated
-        maxRetries: 3
+        skipPreflight: false,
+        preflightCommitment: 'confirmed'
       });
       
       console.log('✅ Transaction sent! Signature:', signature);
