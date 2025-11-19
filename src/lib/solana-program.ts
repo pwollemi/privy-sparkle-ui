@@ -58,7 +58,12 @@ export const useSolanaProgram = () => {
       }
       
       const client = new DynamicBondingCurveClient(connection, 'confirmed');
-      const configKey = new PublicKey('Fcu8wTpiFLfxPDUNSK7kbEKYKqcdWEuaNQHegyoRUygr');
+      
+      // Use the official DAMM V2 config for 2.5% migration fee (FixedBps25)
+      // This is the correct config that Meteora expects
+      const configKey = new PublicKey('7F6dnUcRuyM2TwR8myT1dYypFXpPSxqwKNSFNkxyNESd');
+      
+      console.log('📋 Using DAMM V2 config (2.5% fee):', configKey.toBase58());
 
       // Mint for the new token
       const baseMintKeypair = Keypair.generate();
