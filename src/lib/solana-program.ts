@@ -104,7 +104,7 @@ export const useSolanaProgram = () => {
         tokenType: TokenType.Token2022,
         partnerLpPercentage: 0,
         creatorLpPercentage: 0,
-        partnerLockedLpPercentage: 0,
+        partnerLockedLpPercentage: 100, // 100% locked LP goes to partner (creator)
         creatorLockedLpPercentage: 0,
         creatorTradingFeePercentage: 0,
         leftover: totalSupply * 0.2, // 20% leftover to creator
