@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Header from "@/components/Header";
 import Home from "./pages/Home";
+import Marketplace from "./pages/Marketplace";
 import CreateToken from "./pages/CreateToken";
 import Portfolio from "./pages/Portfolio";
 import Staking from "./pages/Staking";
@@ -33,16 +34,17 @@ const App = () => {
       <BrowserRouter>
         <div className="min-h-screen bg-background">
           <Header />
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/create" element={<CreateToken />} />
-                  <Route path="/portfolio" element={<Portfolio />} />
-                  <Route path="/staking" element={<Staking />} />
-                  <Route path="/vesting" element={<Vesting />} />
-                  <Route path="/token/:id" element={<TokenDetail />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/create" element={<CreateToken />} />
+            <Route path="/portfolio" element={<Portfolio />} />
+            <Route path="/staking" element={<Staking />} />
+            <Route path="/vesting" element={<Vesting />} />
+            <Route path="/token/:id" element={<TokenDetail />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
               </div>
             </BrowserRouter>
           </TooltipProvider>

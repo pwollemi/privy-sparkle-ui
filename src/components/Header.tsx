@@ -34,7 +34,13 @@ const Header = () => {
               onClick={() => navigate('/')}
               className="text-foreground hover:text-primary transition-colors"
             >
-              Discover
+              Home
+            </button>
+            <button 
+              onClick={() => navigate('/marketplace')}
+              className="text-foreground hover:text-primary transition-colors"
+            >
+              Marketplace
             </button>
             <button 
               onClick={() => navigate('/create')}
