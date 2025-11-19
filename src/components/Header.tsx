@@ -31,12 +31,6 @@ const Header = () => {
 
           <nav className="hidden md:flex items-center gap-6">
             <button 
-              onClick={() => navigate('/')}
-              className="text-foreground hover:text-primary transition-colors"
-            >
-              Home
-            </button>
-            <button 
               onClick={() => navigate('/marketplace')}
               className="text-foreground hover:text-primary transition-colors"
             >
