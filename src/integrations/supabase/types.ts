@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      brands: {
+        Row: {
+          business_name: string
+          created_at: string
+          creator_wallet: string | null
+          description: string | null
+          id: string
+          industry: string
+          logo_url: string | null
+          status: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          business_name: string
+          created_at?: string
+          creator_wallet?: string | null
+          description?: string | null
+          id?: string
+          industry: string
+          logo_url?: string | null
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          business_name?: string
+          created_at?: string
+          creator_wallet?: string | null
+          description?: string | null
+          id?: string
+          industry?: string
+          logo_url?: string | null
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       price_history: {
         Row: {
           created_at: string
