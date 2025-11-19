@@ -46,13 +46,16 @@ export const useSolanaProgram = () => {
     if (!publicKey) throw new Error('Wallet not connected');
 
     try {
+      console.log('Starting token pool creation...');
       const client = new DynamicBondingCurveClient(connection, 'confirmed');
-      const configKey = new PublicKey('Fcu8wTpiFLfxPDUNSK7kbEKYKqcdWEuaNQHegyoRUygr'); // Provided config key
+      const configKey = new PublicKey('Fcu8wTpiFLfxPDUNSK7kbEKYKqcdWEuaNQHegyoRUygr');
 
       // Mint for the new token
       const baseMintKeypair = Keypair.generate();
+      console.log('Generated base mint:', baseMintKeypair.publicKey.toBase58());
 
       // Build createPool transaction
+      console.log('Building createPool transaction...');
       const transaction = await client.pool.createPool({
         baseMint: baseMintKeypair.publicKey,
         config: configKey,
@@ -63,7 +66,7 @@ export const useSolanaProgram = () => {
         poolCreator: publicKey,
       });
 
-      // Finalize and send
+      console.log('Transaction built, getting blockhash...');
       const {
         context: { slot: minContextSlot },
         value: { blockhash, lastValidBlockHeight },
@@ -73,7 +76,17 @@ export const useSolanaProgram = () => {
       transaction.recentBlockhash = blockhash;
       transaction.partialSign(baseMintKeypair);
 
-      const signature = await sendTransaction(transaction, connection, { minContextSlot });
+      console.log('Transaction instructions count:', transaction.instructions.length);
+      console.log('Sending transaction to wallet...');
+      
+      const signature = await sendTransaction(transaction, connection, { 
+        minContextSlot,
+        skipPreflight: false,
+        preflightCommitment: 'confirmed'
+      });
+      
+      console.log('Transaction sent, signature:', signature);
+      console.log('Confirming transaction...');
       await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature });
 
       // Fetch created pool by base mint
@@ -100,9 +113,27 @@ export const useSolanaProgram = () => {
         tokenMint: baseMintKeypair.publicKey.toBase58(),
         poolDetails,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating token pool:', error);
-      throw new Error(`Failed to create token pool: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Extract detailed error information
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      // Check for specific wallet errors
+      if (error?.error?.message) {
+        errorMessage = error.error.message;
+      }
+      
+      // Check for transaction simulation errors
+      if (error?.logs) {
+        console.error('Transaction logs:', error.logs);
+        errorMessage += '\nTransaction logs: ' + error.logs.join('\n');
+      }
+      
+      throw new Error(`Failed to create token pool: ${errorMessage}`);
     }
   };
 
