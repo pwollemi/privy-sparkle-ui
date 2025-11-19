@@ -46,114 +46,47 @@ export const useSolanaProgram = () => {
     if (!publicKey) throw new Error('Wallet not connected');
 
     try {
-      console.log('🚀 Starting token pool creation...');
+      console.log('🚀 Starting token pool creation (pool only, config must already exist)...');
 
       const client = new DynamicBondingCurveClient(connection, 'confirmed');
 
-      // -------- 1) Create config (same logic as your reference code) --------
-      console.log('🔧 Building curve config...');
-      const curveConfig = buildCurve({
-        totalTokenSupply: 100000000,
-        percentageSupplyOnMigration: 10,
-        migrationQuoteThreshold: 20,
-        migrationOption: MigrationOption.MET_DAMM_V2,
-        tokenBaseDecimal: TokenDecimal.SIX,
-        tokenQuoteDecimal: TokenDecimal.NINE,
-        lockedVestingParam: {
-          totalLockedVestingAmount: 20000000,
-          numberOfVestingPeriod: 12,
-          cliffUnlockAmount: 0,
-          totalVestingDuration: 356 * 3600 * 24,
-          cliffDurationFromMigrationTime: 0,
-        },
-        baseFeeParams: {
-          baseFeeMode: BaseFeeMode.FeeSchedulerLinear,
-          feeSchedulerParam: {
-            startingFeeBps: 100,
-            endingFeeBps: 10,
-            numberOfPeriod: 1,
-            totalDuration: 100,
-          },
-        },
-        dynamicFeeEnabled: true,
-        activationType: ActivationType.Timestamp,
-        collectFeeMode: CollectFeeMode.QuoteToken,
-        migrationFeeOption: MigrationFeeOption.FixedBps25,
-        tokenType: TokenType.Token2022,
-        partnerLpPercentage: 0,
-        creatorLpPercentage: 0,
-        partnerLockedLpPercentage: 100,
-        creatorLockedLpPercentage: 0,
-        creatorTradingFeePercentage: 0,
-        leftover: 50000000,
-        tokenUpdateAuthority: 4,
-        migrationFee: {
-          feePercentage: 0,
-          creatorFeePercentage: 0,
-        },
-      });
+      // IMPORTANT: Use an already-created config from your createConfig flow
+      // Replace this with your real config address
+      const configKey = new PublicKey('Fcu8wTpiFLfxPDUNSK7kbEKYKqcdWEuaNQHegyoRUygr');
+      console.log('📋 Using existing config:', configKey.toBase58());
 
-      // Generate a new keypair for the config account
-      const configKeypair = Keypair.generate();
-      console.log('📋 configKeypair:', configKeypair.publicKey.toBase58());
-
-      const createConfigParams = {
-        config: configKeypair.publicKey,
-        feeClaimer: new PublicKey('JD2zL67TrjzxkNyjzBT2vqJVqY1ZeSUtotes3LRsmb6Y'),
-        leftoverReceiver: new PublicKey('JD2zL67TrjzxkNyjzBT2vqJVqY1ZeSUtotes3LRsmb6Y'),
-        quoteMint: new PublicKey('So11111111111111111111111111111111111111112'),
-        payer: publicKey,
-        ...curveConfig,
-      };
-
-      console.log('🧱 Building createConfig transaction...');
-      const configTx = await client.partner.createConfig(createConfigParams);
-
-      let {
-        context: { slot: minContextSlot },
-        value: { blockhash, lastValidBlockHeight },
-      } = await connection.getLatestBlockhashAndContext();
-
-      configTx.feePayer = publicKey;
-      configTx.recentBlockhash = blockhash;
-      configTx.partialSign(configKeypair);
-
-      console.log('💳 Sending config transaction...');
-      const configSig = await sendTransaction(configTx, connection, { minContextSlot });
-      console.log('✅ Config tx signature:', configSig);
-
-      await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature: configSig });
-      console.log('🎉 Config created');
-
-      // -------- 2) Create pool using that config (same as your createPool) --------
+      // Generate base mint keypair for the new token
       const baseMintKeypair = Keypair.generate();
       console.log('🔑 baseMintKeypair:', baseMintKeypair.publicKey.toBase58());
 
-      const poolTx = await client.pool.createPool({
+      // Build pool transaction (exactly like your reference createPool)
+      console.log('🔨 Building createPool transaction...');
+      const transaction = await client.pool.createPool({
         name: params.name,
         symbol: params.symbol,
         uri: params.website || 'https://coinporate.app',
         payer: publicKey,
         poolCreator: publicKey,
-        config: configKeypair.publicKey,
+        config: configKey,
         baseMint: baseMintKeypair.publicKey,
       });
 
-      ({
+      const {
         context: { slot: minContextSlot },
         value: { blockhash, lastValidBlockHeight },
-      } = await connection.getLatestBlockhashAndContext());
+      } = await connection.getLatestBlockhashAndContext();
 
-      poolTx.feePayer = publicKey;
-      poolTx.recentBlockhash = blockhash;
-      poolTx.partialSign(baseMintKeypair);
+      transaction.feePayer = publicKey;
+      transaction.recentBlockhash = blockhash;
+      transaction.partialSign(baseMintKeypair);
 
-      console.log('💳 Sending pool transaction...');
-      const signature = await sendTransaction(poolTx, connection, { minContextSlot });
+      console.log('💳 Sending pool transaction to wallet...');
+      const signature = await sendTransaction(transaction, connection, { minContextSlot });
       console.log('✅ Pool tx signature:', signature);
 
+      console.log('⏳ Confirming pool transaction...');
       await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature });
-      console.log('🎉 Pool created');
+      console.log('🎉 Pool transaction confirmed');
 
       // Fetch created pool by base mint
       const created: any = await client.state.getPoolByBaseMint(baseMintKeypair.publicKey);
@@ -182,9 +115,8 @@ export const useSolanaProgram = () => {
       };
     } catch (error: any) {
       console.error('❌ Error creating token pool:', error);
-      let msg = error?.message || 'Unknown error';
-      if (error?.error?.message) msg = error.error.message;
-      throw new Error(`Failed to create token pool: ${msg}`);
+      const baseMsg = error?.error?.message || error?.message || 'Unexpected error';
+      throw new Error(`Failed to create token pool: ${baseMsg}`);
     }
   };
 
