@@ -21,7 +21,6 @@ const CreateToken = () => {
     name: '',
     symbol: '',
     description: '',
-    initialPrice: 0.01,
     totalSupply: 1000000,
     image: null as File | null,
     website: '',
@@ -39,8 +38,6 @@ const CreateToken = () => {
       setFormData(prev => ({ ...prev, image: file }));
     }
   };
-
-  const marketCap = formData.initialPrice * formData.totalSupply;
 
   const handleCreate = async () => {
     if (!formData.name || !formData.symbol || !formData.description) {
@@ -133,7 +130,6 @@ const CreateToken = () => {
         name: '',
         symbol: '',
         description: '',
-        initialPrice: 0.01,
         totalSupply: 1000000,
         image: null,
         website: '',
@@ -202,19 +198,6 @@ const CreateToken = () => {
                   placeholder="e.g., AAPL"
                   value={formData.symbol}
                   onChange={(e) => handleInputChange('symbol', e.target.value)}
-                  className="bg-background"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="initialPrice" className="text-sm font-medium mb-2 block">Initial Price (USD)</Label>
-                <Input
-                  id="initialPrice"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={formData.initialPrice}
-                  onChange={(e) => handleInputChange('initialPrice', parseFloat(e.target.value) || 0.01)}
                   className="bg-background"
                 />
               </div>
@@ -290,18 +273,13 @@ const CreateToken = () => {
 
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Initial Price</p>
-                      <p className="text-2xl font-bold">${formData.initialPrice.toFixed(2)}</p>
-                    </div>
-                    <div>
                       <p className="text-xs text-muted-foreground mb-1">Total Supply</p>
                       <p className="text-2xl font-bold">{formData.totalSupply.toLocaleString()}</p>
                     </div>
-                  </div>
-
-                  <div className="mb-6">
-                    <p className="text-xs text-muted-foreground mb-1">Market Cap</p>
-                    <p className="text-2xl font-bold">${marketCap.toLocaleString()}</p>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Market Cap</p>
+                      <p className="text-2xl font-bold">TBD</p>
+                    </div>
                   </div>
 
                   <div>
