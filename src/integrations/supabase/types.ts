@@ -14,13 +14,212 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      price_history: {
+        Row: {
+          created_at: string
+          id: string
+          price_sol: number
+          timestamp: string
+          token_mint: string
+          transaction_signature: string | null
+          transaction_type: string | null
+          user_wallet: string | null
+          volume_sol: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          price_sol: number
+          timestamp?: string
+          token_mint: string
+          transaction_signature?: string | null
+          transaction_type?: string | null
+          user_wallet?: string | null
+          volume_sol?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          price_sol?: number
+          timestamp?: string
+          token_mint?: string
+          transaction_signature?: string | null
+          transaction_type?: string | null
+          user_wallet?: string | null
+          volume_sol?: number | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          wallet_address: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          wallet_address: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
+      staking_positions: {
+        Row: {
+          apy: number
+          created_at: string
+          id: string
+          lock_period: number
+          lock_progress: number
+          pending_rewards: number
+          stake_date: string
+          staked_amount: number
+          token_mint: string
+          token_name: string
+          token_symbol: string
+          updated_at: string
+          user_wallet: string
+        }
+        Insert: {
+          apy?: number
+          created_at?: string
+          id?: string
+          lock_period?: number
+          lock_progress?: number
+          pending_rewards?: number
+          stake_date?: string
+          staked_amount?: number
+          token_mint: string
+          token_name: string
+          token_symbol: string
+          updated_at?: string
+          user_wallet: string
+        }
+        Update: {
+          apy?: number
+          created_at?: string
+          id?: string
+          lock_period?: number
+          lock_progress?: number
+          pending_rewards?: number
+          stake_date?: string
+          staked_amount?: number
+          token_mint?: string
+          token_name?: string
+          token_symbol?: string
+          updated_at?: string
+          user_wallet?: string
+        }
+        Relationships: []
+      }
+      token_balances: {
+        Row: {
+          balance: number
+          created_at: string
+          id: string
+          last_updated: string
+          token_mint: string
+          user_wallet: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          id?: string
+          last_updated?: string
+          token_mint: string
+          user_wallet: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          id?: string
+          last_updated?: string
+          token_mint?: string
+          user_wallet?: string
+        }
+        Relationships: []
+      }
+      tokens: {
+        Row: {
+          activation_point: number | null
+          base_mint: string
+          config: string | null
+          created_at: string
+          creator: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          pool_address: string
+          pool_type: number | null
+          symbol: string
+          telegram: string | null
+          twitter: string | null
+          tx_signature: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          activation_point?: number | null
+          base_mint: string
+          config?: string | null
+          created_at?: string
+          creator?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          pool_address: string
+          pool_type?: number | null
+          symbol: string
+          telegram?: string | null
+          twitter?: string | null
+          tx_signature?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          activation_point?: number | null
+          base_mint?: string
+          config?: string | null
+          created_at?: string
+          creator?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          pool_address?: string
+          pool_type?: number | null
+          symbol?: string
+          telegram?: string | null
+          twitter?: string | null
+          tx_signature?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      current_user_wallet: { Args: never; Returns: string }
+      get_active_traders_24h: {
+        Args: { token_mint_param: string }
+        Returns: number
+      }
+      is_wallet_owner: { Args: { wallet_address: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

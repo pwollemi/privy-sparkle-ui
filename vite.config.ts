@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     headers: {
-      'Content-Security-Policy': "frame-ancestors 'self' https://lovable.dev https://*.lovableproject.com https://auth.privy.io https://*.privy.io",
+      'Content-Security-Policy': "frame-ancestors 'self' https://lovable.dev https://*.lovableproject.com",
     },
   },
   plugins: [
@@ -37,10 +37,6 @@ export default defineConfig(({ mode }) => ({
         global: 'globalThis',
       },
       onwarn(warning, warn) {
-        // Suppress specific warnings from @privy-io packages
-        if (warning.code === 'INVALID_ANNOTATION' && warning.message.includes('@privy-io')) {
-          return;
-        }
         // Suppress unresolved dependency warnings for react-is
         if (warning.code === 'UNRESOLVED_IMPORT' && warning.message.includes('react-is')) {
           return;
