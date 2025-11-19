@@ -55,9 +55,17 @@ const TokenCard: React.FC<TokenCardProps> = ({ token }) => {
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-lg">
-              {token.symbol.charAt(0)}
-            </div>
+            {token.image && token.image !== '/placeholder.svg' ? (
+              <img 
+                src={token.image} 
+                alt={token.name}
+                className="w-12 h-12 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-lg">
+                {token.symbol.charAt(0)}
+              </div>
+            )}
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-foreground">{token.name}</h3>
