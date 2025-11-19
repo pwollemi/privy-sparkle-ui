@@ -4,12 +4,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Upload, Rocket, AlertCircle, Wallet } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { Rocket, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSolanaProgram } from '@/lib/solana-program';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { supabase } from "@/integrations/supabase/client";
+
 const CreateToken = () => {
   const { toast } = useToast();
   const { connected } = useWallet();
@@ -19,13 +21,15 @@ const CreateToken = () => {
     name: '',
     symbol: '',
     description: '',
+    initialPrice: 0.01,
+    totalSupply: 1000000,
     image: null as File | null,
     website: '',
     twitter: '',
     telegram: ''
   });
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -35,6 +39,8 @@ const CreateToken = () => {
       setFormData(prev => ({ ...prev, image: file }));
     }
   };
+
+  const marketCap = formData.initialPrice * formData.totalSupply;
 
   const handleCreate = async () => {
     if (!formData.name || !formData.symbol || !formData.description) {
@@ -62,7 +68,7 @@ const CreateToken = () => {
         name: formData.name,
         symbol: formData.symbol,
         description: formData.description,
-        initialSupply: 100000000, // Always 100,000,000 tokens
+        initialSupply: formData.totalSupply,
         image: formData.image || undefined,
         website: formData.website,
         twitter: formData.twitter,
@@ -127,6 +133,8 @@ const CreateToken = () => {
         name: '',
         symbol: '',
         description: '',
+        initialPrice: 0.01,
+        totalSupply: 1000000,
         image: null,
         website: '',
         twitter: '',
@@ -146,218 +154,188 @@ const CreateToken = () => {
 
   return (
     <div className="min-h-screen py-12 px-4">
-      <div className="container mx-auto max-w-4xl">
+      <div className="container mx-auto max-w-6xl">
+        {/* Header */}
         <div className="text-center mb-12">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent mx-auto mb-6 flex items-center justify-center">
+            <Rocket className="h-8 w-8 text-white" />
+          </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Create Your <span className="gradient-text">Meme Token</span>
+            Launch Your Token
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Launch your token in minutes! No coding required, just pure meme magic.
+          <p className="text-lg text-muted-foreground">
+            Create and launch your business token in minutes
           </p>
         </div>
 
+        {/* Wallet Connection Banner */}
+        {!connected && (
+          <div className="mb-8 p-4 bg-card border border-border rounded-lg flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">Connect your wallet to launch tokens</p>
+            <WalletMultiButton className="wallet-button" />
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Form */}
-          <Card className="bg-gradient-card border-border">
+          {/* Token Details */}
+          <Card className="bg-card border-border h-fit">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Rocket className="h-5 w-5 text-primary" />
-                Token Details
-              </CardTitle>
+              <CardTitle className="text-xl font-bold">Token Details</CardTitle>
+              <p className="text-sm text-muted-foreground">Configure your token parameters</p>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Token Name *</Label>
-                  <Input
-                    id="name"
-                    placeholder="Pepe Moon"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
-                    className="bg-input/50"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="symbol">Symbol *</Label>
-                  <Input
-                    id="symbol"
-                    placeholder="PMOON"
-                    value={formData.symbol}
-                    onChange={(e) => handleInputChange('symbol', e.target.value)}
-                    className="bg-input/50"
-                  />
-                </div>
+              <div>
+                <Label htmlFor="name" className="text-sm font-medium mb-2 block">Token Name</Label>
+                <Input
+                  id="name"
+                  placeholder="e.g., Apple Inc."
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  className="bg-background"
+                />
               </div>
 
               <div>
-                <Label htmlFor="description">Description *</Label>
+                <Label htmlFor="symbol" className="text-sm font-medium mb-2 block">Token Symbol</Label>
+                <Input
+                  id="symbol"
+                  placeholder="e.g., AAPL"
+                  value={formData.symbol}
+                  onChange={(e) => handleInputChange('symbol', e.target.value)}
+                  className="bg-background"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="initialPrice" className="text-sm font-medium mb-2 block">Initial Price (USD)</Label>
+                <Input
+                  id="initialPrice"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={formData.initialPrice}
+                  onChange={(e) => handleInputChange('initialPrice', parseFloat(e.target.value) || 0.01)}
+                  className="bg-background"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <Label className="text-sm font-medium">Total Supply</Label>
+                  <span className="text-lg font-bold">{formData.totalSupply.toLocaleString()}</span>
+                </div>
+                <Slider
+                  value={[formData.totalSupply]}
+                  onValueChange={([value]) => handleInputChange('totalSupply', value)}
+                  min={100000}
+                  max={10000000}
+                  step={100000}
+                  className="mb-2"
+                />
+                <p className="text-xs text-muted-foreground">Adjust the total supply of tokens to be created</p>
+              </div>
+
+              <div>
+                <Label htmlFor="description" className="text-sm font-medium mb-2 block">Token Description</Label>
                 <Textarea
                   id="description"
-                  placeholder="The ultimate meme coin that's going to the moon! 🚀"
+                  placeholder="Describe your token and its utility..."
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
-                  className="bg-input/50 min-h-[100px]"
+                  className="bg-background min-h-[100px]"
                 />
               </div>
 
-              <div className="text-center p-4 bg-card/30 rounded-lg border border-border/50">
-                <p className="text-sm font-medium text-muted-foreground mb-1">Total Supply</p>
-                <p className="text-lg font-bold">100,000,000</p>
-                <p className="text-xs text-muted-foreground">Fixed for all tokens</p>
-              </div>
-
-              <div>
-                <Label htmlFor="image">Token Image</Label>
-                <div className="relative">
-                  <input
-                    type="file"
-                    id="image"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={() => document.getElementById('image')?.click()}
-                    className="w-full"
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    {formData.image ? formData.image.name : 'Upload Image'}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Social Links (Optional)</h3>
-                <Input
-                  placeholder="Website URL"
-                  value={formData.website}
-                  onChange={(e) => handleInputChange('website', e.target.value)}
-                  className="bg-input/50"
-                />
-                <Input
-                  placeholder="Twitter Handle"
-                  value={formData.twitter}
-                  onChange={(e) => handleInputChange('twitter', e.target.value)}
-                  className="bg-input/50"
-                />
-                <Input
-                  placeholder="Telegram Channel"
-                  value={formData.telegram}
-                  onChange={(e) => handleInputChange('telegram', e.target.value)}
-                  className="bg-input/50"
-                />
-              </div>
+              <Button
+                onClick={handleCreate}
+                disabled={isCreating || !isConnected}
+                className="w-full bg-muted hover:bg-muted/80 text-foreground"
+                size="lg"
+              >
+                {isCreating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current mr-2" />
+                    Launching...
+                  </>
+                ) : (
+                  <>
+                    <Rocket className="h-5 w-5 mr-2" />
+                    Launch Token
+                  </>
+                )}
+              </Button>
             </CardContent>
           </Card>
 
-          {/* Preview & Launch */}
+          {/* Live Preview */}
           <div className="space-y-6">
-            <Card className="bg-gradient-card border-border">
+            <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle>Token Preview</CardTitle>
+                <CardTitle className="text-xl font-bold flex items-center gap-2">
+                  <span className="text-lg">📈</span> Live Preview
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-center space-y-4">
-                  <div className="w-20 h-20 bg-muted rounded-full mx-auto flex items-center justify-center">
-                    {formData.image ? (
-                      <img 
-                        src={URL.createObjectURL(formData.image)} 
-                        alt="Token"
-                        className="w-full h-full rounded-full object-cover"
-                      />
-                    ) : (
-                      <Rocket className="h-8 w-8 text-muted-foreground" />
-                    )}
+              <CardContent className="space-y-6">
+                {/* Token Preview Card */}
+                <div className="bg-gradient-to-br from-primary/5 to-accent/5 rounded-lg p-6">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-2xl text-white font-bold">
+                      {formData.symbol ? formData.symbol.charAt(0) : '?'}
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">{formData.name || 'Your Token Name'}</h3>
+                      <p className="text-muted-foreground">${formData.symbol || 'SYMBOL'}</p>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold">{formData.name || 'Token Name'}</h3>
-                  <p className="text-muted-foreground">${formData.symbol || 'SYMBOL'}</p>
-                  <p className="text-sm text-accent font-medium">Total Supply: 100,000,000</p>
-                  <p className="text-sm text-muted-foreground">
-                    {formData.description || 'Token description will appear here...'}
-                  </p>
+
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Initial Price</p>
+                      <p className="text-2xl font-bold">${formData.initialPrice.toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Total Supply</p>
+                      <p className="text-2xl font-bold">{formData.totalSupply.toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <p className="text-xs text-muted-foreground mb-1">Market Cap</p>
+                    <p className="text-2xl font-bold">${marketCap.toLocaleString()}</p>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">💬</span>
+                      <p className="font-semibold">Token Description</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {formData.description || 'Your token description will appear here...'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Launch Benefits */}
+                <div className="bg-gradient-to-br from-primary to-accent rounded-lg p-6 text-white">
+                  <h3 className="text-xl font-bold mb-4">Launch Benefits</h3>
+                  <div className="space-y-3">
+                    {[
+                      'Instant token creation',
+                      'Automatic liquidity pool',
+                      'Built-in trading interface',
+                      'Real-time price tracking'
+                    ].map((benefit, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                          <Check className="h-3 w-3" />
+                        </div>
+                        <span className="text-sm">{benefit}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>
-
-            {!connected ? (
-              <Card className="bg-card/50 border-primary/20">
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-3">
-                    <Wallet className="h-5 w-5 text-primary mt-1" />
-                    <div className="text-sm">
-                      <p className="font-semibold text-primary mb-1">Connect Wallet</p>
-                      <p className="text-muted-foreground mb-3">
-                        Connect your Solana wallet to create and deploy tokens on-chain.
-                      </p>
-                      <WalletMultiButton 
-                        className="wallet-button"
-                        style={{
-                          border: '2px solid hsl(280 100% 70%)',
-                          background: 'transparent',
-                          color: 'hsl(280 100% 70%)',
-                          boxShadow: '0 0 20px hsl(280 100% 70% / 0.5)',
-                          borderRadius: '0.5rem',
-                          height: '2.25rem',
-                          padding: '0 0.75rem',
-                          fontSize: '0.875rem',
-                          fontWeight: '500',
-                          transition: 'all 0.3s'
-                        }}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : isConnected ? (
-              <Card className="bg-card/50 border-green-500/20">
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-3">
-                    <Wallet className="h-5 w-5 text-green-500 mt-1" />
-                    <div className="text-sm">
-                      <p className="font-semibold text-green-500 mb-1">Wallet Connected</p>
-                      <p className="text-muted-foreground">
-                        {walletAddress ? `${walletAddress.slice(0, 8)}...${walletAddress.slice(-8)}` : 'Connected'}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="bg-card/50 border-orange-500/20">
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-orange-500 mt-1" />
-                    <div className="text-sm">
-                      <p className="font-semibold text-orange-500 mb-1">No Solana Wallet</p>
-                      <p className="text-muted-foreground">
-                        Please connect a Solana wallet to create tokens on-chain.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            <Button
-              variant="hero"
-              size="xl"
-              onClick={handleCreate}
-              disabled={isCreating || !isConnected}
-              className="w-full neon-glow"
-            >
-              {isCreating ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current" />
-                  Launching to the Moon...
-                </>
-              ) : (
-                <>
-                  <Rocket className="h-5 w-5" />
-                  Launch Token 🚀
-                </>
-              )}
-            </Button>
           </div>
         </div>
       </div>
