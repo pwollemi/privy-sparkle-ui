@@ -160,10 +160,12 @@ export const useSolanaProgram = () => {
     }
 
     try {
+      console.log('💰 Starting buy transaction...');
       const client = new DynamicBondingCurveClient(connection, 'confirmed');
       const poolPubkey = new PublicKey(poolAddress);
       
       // Get pool state to access token info
+      console.log('📊 Fetching pool state...');
       const poolState = await client.state.getPool(poolPubkey);
       if (!poolState) {
         throw new Error('Pool not found');
@@ -176,10 +178,15 @@ export const useSolanaProgram = () => {
         throw new Error('Base mint not found in pool');
       }
 
+      console.log('🪙 Token mint:', baseMint.toString());
+      console.log('💵 Buying with SOL:', solAmount);
+
       // Convert SOL amount to lamports (BN)
       const lamportsBn = new BN(Math.floor(solAmount * LAMPORTS_PER_SOL));
+      console.log('📊 Lamports:', lamportsBn.toString());
 
       // Build swap transaction (buy) - swapping SOL for tokens
+      console.log('🔨 Building buy transaction...');
       const transaction = await client.pool.swap({
         pool: poolPubkey,
         owner: publicKey,
@@ -191,6 +198,7 @@ export const useSolanaProgram = () => {
       });
 
       // Send and confirm transaction
+      console.log('⏳ Getting blockhash...');
       const {
         context: { slot: minContextSlot },
         value: { blockhash, lastValidBlockHeight },
@@ -199,8 +207,13 @@ export const useSolanaProgram = () => {
       transaction.feePayer = publicKey;
       transaction.recentBlockhash = blockhash;
 
-      console.log('💰 Sending buy transaction...');
-      const signature = await sendTransaction(transaction, connection, { minContextSlot });
+      console.log('📤 Transaction instructions:', transaction.instructions.length);
+      console.log('💳 Sending buy transaction to wallet...');
+      const signature = await sendTransaction(transaction, connection, { 
+        minContextSlot,
+        skipPreflight: false,
+        preflightCommitment: 'confirmed'
+      });
       console.log('📝 Transaction signature:', signature);
       
       console.log('⏳ Confirming transaction...');
@@ -235,10 +248,12 @@ export const useSolanaProgram = () => {
     }
 
     try {
+      console.log('🔴 Starting sell transaction...');
       const client = new DynamicBondingCurveClient(connection, 'confirmed');
       const poolPubkey = new PublicKey(poolAddress);
       
       // Get pool state to access token info
+      console.log('📊 Fetching pool state...');
       const poolState = await client.state.getPool(poolPubkey);
       if (!poolState) {
         throw new Error('Pool not found');
@@ -251,11 +266,32 @@ export const useSolanaProgram = () => {
         throw new Error('Base mint not found in pool');
       }
 
+      console.log('🪙 Token mint:', baseMint.toString());
+
       // Determine which token program this mint uses (Token or Token-2022)
       const baseMintPubkey = new PublicKey(baseMint.toString());
       const mintAccInfo = await connection.getAccountInfo(baseMintPubkey, 'confirmed');
       const isToken2022 = mintAccInfo?.owner?.equals(TOKEN_2022_PROGRAM_ID) ?? false;
       const tokenProgramId = isToken2022 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
+      
+      console.log('🔧 Token program:', isToken2022 ? 'Token-2022' : 'Token');
+      
+      // Check if user has associated token account and balance
+      const ata = getAssociatedTokenAddressSync(baseMintPubkey, publicKey, false, tokenProgramId);
+      console.log('💼 User ATA:', ata.toString());
+      
+      try {
+        const tokenAccount = await getAccount(connection, ata, 'confirmed', tokenProgramId);
+        const currentBalance = Number(tokenAccount.amount);
+        console.log('💰 Current token balance (raw):', currentBalance);
+        
+        if (currentBalance === 0) {
+          throw new Error('No tokens to sell');
+        }
+      } catch (ataError) {
+        console.error('❌ Token account error:', ataError);
+        throw new Error('You do not own any of these tokens');
+      }
       
       // Determine token decimals and convert to smallest units (BN)
       const mintInfo = await getMint(connection, baseMintPubkey, 'confirmed', tokenProgramId);
@@ -263,7 +299,12 @@ export const useSolanaProgram = () => {
       const factor = Math.pow(10, decimals);
       const amountBn = new BN(Math.floor(tokenAmount * factor));
 
+      console.log('📏 Decimals:', decimals);
+      console.log('📊 Selling amount (tokens):', tokenAmount);
+      console.log('📊 Selling amount (raw):', amountBn.toString());
+
       // Build swap transaction (sell) - swapping tokens for SOL
+      console.log('🔨 Building sell transaction...');
       const transaction = await client.pool.swap({
         pool: poolPubkey,
         owner: publicKey,
@@ -275,6 +316,7 @@ export const useSolanaProgram = () => {
       });
 
       // Send transaction
+      console.log('⏳ Getting blockhash...');
       const {
         context: { slot: minContextSlot },
         value: { blockhash, lastValidBlockHeight },
@@ -283,7 +325,17 @@ export const useSolanaProgram = () => {
       transaction.feePayer = publicKey;
       transaction.recentBlockhash = blockhash;
 
-      const signature = await sendTransaction(transaction, connection, { minContextSlot });
+      console.log('📤 Transaction instructions:', transaction.instructions.length);
+      console.log('💳 Sending sell transaction to wallet...');
+      
+      const signature = await sendTransaction(transaction, connection, { 
+        minContextSlot,
+        skipPreflight: false,
+        preflightCommitment: 'confirmed'
+      });
+      
+      console.log('📝 Sell signature:', signature);
+      console.log('⏳ Confirming transaction...');
       await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature });
 
       // Calculate current price from pool state and record it
@@ -302,10 +354,46 @@ export const useSolanaProgram = () => {
         console.error('Failed to record price after sell:', priceError);
       }
 
+      console.log('✅ Sell transaction confirmed!');
+
+      // Calculate current price from pool state and record it
+      try {
+        const updatedPoolState = await client.state.getPool(poolPubkey);
+        const updatedAccount = (updatedPoolState as any)?.account ?? updatedPoolState;
+        const currentPrice = updatedAccount?.sqrtPrice ? Number(updatedAccount.sqrtPrice.toString()) / (2 ** 63) : 0;
+        const tokenValue = tokenAmount * currentPrice;
+        
+        console.log('Recording sell price:', currentPrice, 'SOL for token:', baseMint.toString());
+        await recordPriceHistory(baseMint.toString(), currentPrice, 'sell', signature, publicKey.toString(), tokenValue);
+        
+        // Update user's token balance in database
+        await updateUserTokenBalance(publicKey.toString(), baseMint.toString());
+      } catch (priceError) {
+        console.error('Failed to record price after sell:', priceError);
+      }
+
       return signature;
-    } catch (error) {
-      console.error('Error selling token:', error);
-      throw new Error(`Failed to sell token: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } catch (error: any) {
+      console.error('❌ Error selling token:', error);
+      
+      // Extract detailed error information
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      // Check for specific wallet errors
+      if (error?.error?.message) {
+        errorMessage = error.error.message;
+      }
+      
+      // Check for transaction simulation errors
+      if (error?.logs) {
+        console.error('Transaction logs:', error.logs);
+        errorMessage += '\nTransaction logs: ' + error.logs.join('\n');
+      }
+      
+      throw new Error(`Failed to sell token: ${errorMessage}`);
     }
   };
 
