@@ -46,16 +46,26 @@ export const useSolanaProgram = () => {
     if (!publicKey) throw new Error('Wallet not connected');
 
     try {
-      console.log('Starting token pool creation...');
+      console.log('🚀 Starting token pool creation...');
+      
+      // Check wallet balance first
+      const balance = await connection.getBalance(publicKey);
+      const balanceSOL = balance / LAMPORTS_PER_SOL;
+      console.log('💰 Wallet balance:', balanceSOL, 'SOL');
+      
+      if (balanceSOL < 0.1) {
+        throw new Error(`Insufficient SOL balance. You have ${balanceSOL.toFixed(4)} SOL but need at least 0.1 SOL for transaction fees and rent.`);
+      }
+      
       const client = new DynamicBondingCurveClient(connection, 'confirmed');
       const configKey = new PublicKey('Fcu8wTpiFLfxPDUNSK7kbEKYKqcdWEuaNQHegyoRUygr');
 
       // Mint for the new token
       const baseMintKeypair = Keypair.generate();
-      console.log('Generated base mint:', baseMintKeypair.publicKey.toBase58());
+      console.log('🔑 Generated base mint:', baseMintKeypair.publicKey.toBase58());
 
       // Build createPool transaction
-      console.log('Building createPool transaction...');
+      console.log('🔨 Building createPool transaction...');
       const transaction = await client.pool.createPool({
         baseMint: baseMintKeypair.publicKey,
         config: configKey,
@@ -66,7 +76,7 @@ export const useSolanaProgram = () => {
         poolCreator: publicKey,
       });
 
-      console.log('Transaction built, getting blockhash...');
+      console.log('⏳ Getting blockhash...');
       const {
         context: { slot: minContextSlot },
         value: { blockhash, lastValidBlockHeight },
@@ -76,18 +86,45 @@ export const useSolanaProgram = () => {
       transaction.recentBlockhash = blockhash;
       transaction.partialSign(baseMintKeypair);
 
-      console.log('Transaction instructions count:', transaction.instructions.length);
-      console.log('Sending transaction to wallet...');
+      console.log('📊 Transaction details:');
+      console.log('  - Instructions:', transaction.instructions.length);
+      console.log('  - Signers:', transaction.signatures.length);
+      
+      // Calculate transaction size
+      const serializedTx = transaction.serialize({ requireAllSignatures: false, verifySignatures: false });
+      console.log('  - Size:', serializedTx.length, 'bytes');
+      
+      if (serializedTx.length > 1232) {
+        console.warn('⚠️ Transaction size is large:', serializedTx.length, 'bytes (max: 1232)');
+      }
+
+      // Try simulating first
+      console.log('🧪 Simulating transaction...');
+      try {
+        const simulation = await connection.simulateTransaction(transaction);
+        if (simulation.value.err) {
+          console.error('❌ Simulation failed:', simulation.value.err);
+          console.error('📜 Simulation logs:', simulation.value.logs);
+          throw new Error(`Transaction simulation failed: ${JSON.stringify(simulation.value.err)}`);
+        }
+        console.log('✅ Simulation successful');
+      } catch (simError: any) {
+        console.error('❌ Simulation error:', simError);
+        throw new Error(`Failed to simulate transaction: ${simError.message}`);
+      }
+
+      console.log('💳 Sending transaction to wallet for approval...');
       
       const signature = await sendTransaction(transaction, connection, { 
         minContextSlot,
-        skipPreflight: false,
-        preflightCommitment: 'confirmed'
+        skipPreflight: true, // Skip preflight since we already simulated
+        maxRetries: 3
       });
       
-      console.log('Transaction sent, signature:', signature);
-      console.log('Confirming transaction...');
+      console.log('✅ Transaction sent! Signature:', signature);
+      console.log('⏳ Confirming transaction...');
       await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature });
+      console.log('🎉 Transaction confirmed!');
 
       // Fetch created pool by base mint
       const created: any = await client.state.getPoolByBaseMint(baseMintKeypair.publicKey);
@@ -107,6 +144,7 @@ export const useSolanaProgram = () => {
           }
         : undefined;
 
+      console.log('✨ Pool created successfully:', poolAddress);
       return {
         signature,
         poolAddress,
@@ -114,23 +152,46 @@ export const useSolanaProgram = () => {
         poolDetails,
       };
     } catch (error: any) {
-      console.error('Error creating token pool:', error);
+      console.error('❌ Error creating token pool:', error);
       
       // Extract detailed error information
-      let errorMessage = 'Unknown error';
+      let errorMessage = 'Unknown error occurred';
+      
       if (error instanceof Error) {
         errorMessage = error.message;
       }
       
-      // Check for specific wallet errors
-      if (error?.error?.message) {
-        errorMessage = error.error.message;
+      // Check for nested wallet errors
+      if (error?.error) {
+        if (typeof error.error === 'string') {
+          errorMessage = error.error;
+        } else if (error.error.message) {
+          errorMessage = error.error.message;
+        }
+        
+        // Check for error code
+        if (error.error.code) {
+          errorMessage += ` (Code: ${error.error.code})`;
+        }
       }
       
       // Check for transaction simulation errors
-      if (error?.logs) {
-        console.error('Transaction logs:', error.logs);
-        errorMessage += '\nTransaction logs: ' + error.logs.join('\n');
+      if (error?.logs && Array.isArray(error.logs)) {
+        console.error('📜 Transaction logs:', error.logs);
+        errorMessage += '\n\nTransaction logs:\n' + error.logs.join('\n');
+      }
+      
+      // User-friendly error messages
+      if (errorMessage.includes('User rejected')) {
+        throw new Error('Transaction was rejected in your wallet. Please approve the transaction to create the token.');
+      }
+      
+      if (errorMessage.includes('Insufficient funds') || errorMessage.includes('insufficient lamports')) {
+        throw new Error('Insufficient SOL balance. Please add more SOL to your wallet and try again.');
+      }
+      
+      if (errorMessage.includes('Blockhash not found')) {
+        throw new Error('Transaction expired. Please try again.');
       }
       
       throw new Error(`Failed to create token pool: ${errorMessage}`);
