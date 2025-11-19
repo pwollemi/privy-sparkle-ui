@@ -96,7 +96,6 @@ const CreateToken = () => {
         symbol: formData.symbol,
         description: formData.description,
         image_url: imageUrl,
-        initial_supply: 100000000, // Always 100,000,000 tokens
         website: formData.website || null,
         twitter: formData.twitter || null,
         telegram: formData.telegram || null,
