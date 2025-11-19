@@ -30,9 +30,9 @@ const App = () => {
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
-              <div className="min-h-screen bg-gradient-hero">
-                <Header />
+      <BrowserRouter>
+        <div className="min-h-screen bg-background">
+          <Header />
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/create" element={<CreateToken />} />
